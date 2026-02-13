@@ -24,6 +24,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { CollegeActions } from "@/components/college-actions";
 import { cn, formatCurrency, formatPercent, formatNumber } from "@/lib/utils";
 import type {
   College,
@@ -1037,30 +1038,13 @@ function HomePageContent() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-center gap-1">
-                            {user && (
-                              <button
-                                onClick={() =>
-                                  toggleFavoriteMutation.mutate(college.id)
-                                }
-                                className="rounded-md p-1 transition-colors hover:bg-red-50"
-                                title={
-                                  favoriteIds.has(college.id)
-                                    ? "Remove from favorites"
-                                    : "Add to favorites"
-                                }
-                              >
-                                <FaIcon
-                                  icon="heart"
-                                  style={favoriteIds.has(college.id) ? "solid" : "regular"}
-                                  className={cn(
-                                    "text-sm",
-                                    favoriteIds.has(college.id)
-                                      ? "text-red-500"
-                                      : "text-muted-foreground"
-                                  )}
-                                />
-                              </button>
-                            )}
+                            <CollegeActions
+                              collegeId={college.id}
+                              isFavorite={favoriteIds.has(college.id)}
+                              onToggleFavorite={() => toggleFavoriteMutation.mutate(college.id)}
+                              user={user}
+                              variant="table"
+                            />
                             {college.website && (
                               <a
                                 href={
@@ -1101,25 +1085,13 @@ function HomePageContent() {
                           Jesuit
                         </Badge>
                       )}
-                      {user && (
-                        <button
-                          onClick={() =>
-                            toggleFavoriteMutation.mutate(college.id)
-                          }
-                          className="absolute top-2 right-2 rounded-full bg-white/90 p-1.5 shadow-sm transition-colors hover:bg-white"
-                        >
-                          <FaIcon
-                            icon="heart"
-                            style={favoriteIds.has(college.id) ? "solid" : "regular"}
-                            className={cn(
-                              "text-sm",
-                              favoriteIds.has(college.id)
-                                ? "text-red-500"
-                                : "text-muted-foreground"
-                            )}
-                          />
-                        </button>
-                      )}
+                      <CollegeActions
+                        collegeId={college.id}
+                        isFavorite={favoriteIds.has(college.id)}
+                        onToggleFavorite={() => toggleFavoriteMutation.mutate(college.id)}
+                        user={user}
+                        variant="grid"
+                      />
                     </div>
                     <CardContent className="p-4">
                       <a
@@ -1232,30 +1204,13 @@ function HomePageContent() {
                           </div>
                         </div>
                         <div className="flex shrink-0 items-center gap-1">
-                          {user && (
-                            <button
-                              onClick={() =>
-                                toggleFavoriteMutation.mutate(college.id)
-                              }
-                              className="rounded-md p-1.5 transition-colors hover:bg-red-50"
-                              title={
-                                favoriteIds.has(college.id)
-                                  ? "Remove from favorites"
-                                  : "Add to favorites"
-                              }
-                            >
-                              <FaIcon
-                                icon="heart"
-                                style={favoriteIds.has(college.id) ? "solid" : "regular"}
-                                className={cn(
-                                  "text-sm",
-                                  favoriteIds.has(college.id)
-                                    ? "text-red-500"
-                                    : "text-muted-foreground"
-                                )}
-                              />
-                            </button>
-                          )}
+                          <CollegeActions
+                            collegeId={college.id}
+                            isFavorite={favoriteIds.has(college.id)}
+                            onToggleFavorite={() => toggleFavoriteMutation.mutate(college.id)}
+                            user={user}
+                            variant="list"
+                          />
                           {college.website && (
                             <a
                               href={

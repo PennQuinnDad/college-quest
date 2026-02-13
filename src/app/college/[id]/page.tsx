@@ -30,6 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CollegeActions } from "@/components/college-actions";
 import { toast } from "@/components/ui/toaster";
 import { cn, formatCurrency, formatPercent, formatNumber } from "@/lib/utils";
 import type { College, School } from "@/lib/types";
@@ -495,27 +496,36 @@ export default function CollegeDetailPage({
           </Button>
 
           {user && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleToggleFavorite}
-              disabled={toggleFavorite.isPending}
-              className={cn(
-                "gap-1.5 transition-colors",
-                isFavorite &&
-                  "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
-              )}
-            >
-              <FaIcon
-                icon="heart"
-                style={isFavorite ? "solid" : "regular"}
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleToggleFavorite}
+                disabled={toggleFavorite.isPending}
                 className={cn(
-                  "text-sm",
-                  isFavorite ? "text-amber-500" : "text-muted-foreground"
+                  "gap-1.5 transition-colors",
+                  isFavorite &&
+                    "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
                 )}
+              >
+                <FaIcon
+                  icon="heart"
+                  style={isFavorite ? "solid" : "regular"}
+                  className={cn(
+                    "text-sm",
+                    isFavorite ? "text-amber-500" : "text-muted-foreground"
+                  )}
+                />
+                {isFavorite ? "Favorited" : "Favorite"}
+              </Button>
+              <CollegeActions
+                collegeId={id}
+                isFavorite={isFavorite}
+                onToggleFavorite={handleToggleFavorite}
+                user={user}
+                variant="detail"
               />
-              {isFavorite ? "Favorited" : "Favorite"}
-            </Button>
+            </>
           )}
 
           {user && (
