@@ -79,15 +79,15 @@ export async function GET(request: NextRequest) {
       const orConditions: string[] = [];
       for (const range of ranges) {
         if (range.includes("0-15")) {
-          orConditions.push("and(acceptance_rate.gte.0,acceptance_rate.lte.0.15)");
+          orConditions.push("and(acceptance_rate.gt.0,acceptance_rate.lte.15)");
         } else if (range.includes("15-30")) {
-          orConditions.push("and(acceptance_rate.gte.0.15,acceptance_rate.lte.0.30)");
+          orConditions.push("and(acceptance_rate.gt.15,acceptance_rate.lte.30)");
         } else if (range.includes("30-50")) {
-          orConditions.push("and(acceptance_rate.gte.0.30,acceptance_rate.lte.0.50)");
+          orConditions.push("and(acceptance_rate.gt.30,acceptance_rate.lte.50)");
         } else if (range.includes("50-75")) {
-          orConditions.push("and(acceptance_rate.gte.0.50,acceptance_rate.lte.0.75)");
+          orConditions.push("and(acceptance_rate.gt.50,acceptance_rate.lte.75)");
         } else if (range.includes("75")) {
-          orConditions.push("acceptance_rate.gte.0.75");
+          orConditions.push("acceptance_rate.gt.75");
         }
       }
       if (orConditions.length > 0) {
