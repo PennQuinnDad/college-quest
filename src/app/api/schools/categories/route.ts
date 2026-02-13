@@ -5,21 +5,35 @@ export async function GET() {
   try {
     const supabase = createServiceClient();
 
-    // Use a single query to get all categories, then deduplicate in JS.
-    // Fetch only the category column with a large limit to avoid pagination.
-    const { data, error } = await supabase
-      .from("schools")
-      .select("category")
-      .not("category", "is", null)
-      .limit(10000);
+    // Supabase caps rows at 1000 per request, so we must paginate to
+    // collect every distinct category from the ~22k schools rows.
+    const PAGE_SIZE = 1000;
+    const allCategories = new Set<string>();
+    let offset = 0;
+    let done = false;
 
-    if (error) throw error;
+    while (!done) {
+      const { data, error } = await supabase
+        .from("schools")
+        .select("category")
+        .not("category", "is", null)
+        .order("category", { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1);
 
-    const categories = [...new Set(
-      (data || []).map((row) => row.category as string).filter(Boolean)
-    )].sort();
+      if (error) throw error;
 
-    return NextResponse.json(categories);
+      for (const row of data || []) {
+        if (row.category) allCategories.add(row.category as string);
+      }
+
+      if (!data || data.length < PAGE_SIZE) {
+        done = true;
+      } else {
+        offset += PAGE_SIZE;
+      }
+    }
+
+    return NextResponse.json([...allCategories].sort());
   } catch (error) {
     console.error("Error fetching categories:", error);
     return NextResponse.json(
