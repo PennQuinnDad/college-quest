@@ -986,9 +986,6 @@ function HomePageContent() {
                       <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">
                         Size
                       </th>
-                      <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden lg:table-cell">
-                        Jesuit
-                      </th>
                       <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden sm:table-cell">
                         Tuition
                       </th>
@@ -1022,13 +1019,6 @@ function HomePageContent() {
                         </td>
                         <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
                           {college.size || "---"}
-                        </td>
-                        <td className="px-4 py-3 text-center hidden lg:table-cell">
-                          {college.jesuit && (
-                            <Badge className="bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100">
-                              Jesuit
-                            </Badge>
-                          )}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-muted-foreground hidden sm:table-cell">
                           {formatCurrency(college.tuitionInState)}
