@@ -108,7 +108,7 @@ function LoginPageContent() {
           <CardHeader className="items-center space-y-4 pb-2 pt-8">
             {/* Logo */}
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-md">
-              <FaIcon icon="graduation-cap" className="text-2xl text-white" />
+              <FaIcon icon="graduation-cap" style="duotone" className="text-2xl text-white" />
             </div>
 
             <div className="space-y-1 text-center">
@@ -125,7 +125,7 @@ function LoginPageContent() {
             {/* Error message */}
             {errorMessage && (
               <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-                <FaIcon icon="circle-exclamation" className="mt-0.5 text-sm shrink-0" />
+                <FaIcon icon="circle-exclamation" style="duotone" className="mt-0.5 text-sm shrink-0" />
                 <span>{errorMessage}</span>
               </div>
             )}
@@ -148,7 +148,7 @@ function LoginPageContent() {
                   onClick={() => handleOAuthLogin(id)}
                 >
                   {isLoading ? (
-                    <FaIcon icon="spinner" className="mr-2 text-lg fa-spin" />
+                    <FaIcon icon="spinner" style="duotone" className="mr-2 text-lg fa-spin" />
                   ) : (
                     <FaIcon icon={faIcon} style="brands" className="mr-2 text-lg" />
                   )}

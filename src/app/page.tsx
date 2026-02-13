@@ -106,7 +106,6 @@ function HomePageContent() {
 
   // ---- Local UI state ----
   const [viewMode, setViewMode] = useState<ViewMode>("table");
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [searchInput, setSearchInput] = useState(params.query || "");
   const [autocompleteOpen, setAutocompleteOpen] = useState(false);
@@ -507,6 +506,16 @@ function HomePageContent() {
     }
   }
 
+  // ---- Store search result IDs in sessionStorage for detail page nav ----
+  useEffect(() => {
+    if (colleges.length > 0) {
+      sessionStorage.setItem(
+        "cq-search-results",
+        JSON.stringify(colleges.map((c) => c.id))
+      );
+    }
+  }, [colleges]);
+
   // ---- Render helpers ----
   const sortIcon = params.sortOrder === "asc" ? <FaIcon icon="arrow-up" className="text-xs" /> : <FaIcon icon="arrow-down" className="text-xs" />;
 
@@ -520,7 +529,7 @@ function HomePageContent() {
           {/* Logo */}
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <FaIcon icon="graduation-cap" className="text-lg text-white" />
+              <FaIcon icon="graduation-cap" style="duotone" className="text-lg text-white" />
             </div>
             <span className="text-xl font-bold tracking-tight text-primary">
               College Quest
@@ -592,7 +601,7 @@ function HomePageContent() {
                   href="/auth/signout"
                   className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  <FaIcon icon="right-from-bracket" className="text-sm" />
+                  <FaIcon icon="right-from-bracket" style="duotone" className="text-sm" />
                   <span className="hidden sm:inline">Sign out</span>
                 </a>
               </div>
@@ -601,7 +610,7 @@ function HomePageContent() {
                 href="/login"
                 className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
               >
-                <FaIcon icon="right-to-bracket" className="text-sm" />
+                <FaIcon icon="right-to-bracket" style="duotone" className="text-sm" />
                 Log in
               </a>
             )}
@@ -615,7 +624,7 @@ function HomePageContent() {
         {/* ================================================================ */}
         <div className="relative mb-6">
           <div className="relative">
-            <FaIcon icon="magnifying-glass" className="pointer-events-none absolute left-3.5 top-1/2 text-lg -translate-y-1/2 text-muted-foreground" />
+            <FaIcon icon="magnifying-glass" style="duotone" className="pointer-events-none absolute left-3.5 top-1/2 text-lg -translate-y-1/2 text-muted-foreground" />
             <input
               ref={searchInputRef}
               type="text"
@@ -677,7 +686,7 @@ function HomePageContent() {
                       : "text-foreground hover:bg-gray-50"
                   )}
                 >
-                  <FaIcon icon="graduation-cap" className="text-sm shrink-0 text-muted-foreground" />
+                  <FaIcon icon="graduation-cap" style="duotone" className="text-sm shrink-0 text-muted-foreground" />
                   <span>{item.name}</span>
                 </button>
               ))}
@@ -686,32 +695,70 @@ function HomePageContent() {
         </div>
 
         {/* ================================================================ */}
-        {/* FILTER SECTION                                                    */}
+        {/* FILTER ROW — always visible                                        */}
         {/* ================================================================ */}
-        <div className="mb-6">
-          {/* Filter toggle + active filters row */}
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setFiltersOpen(!filtersOpen)}
-              className="gap-1.5"
-            >
-              <FaIcon icon="sliders" className="text-sm" />
-              Filters
-              {activeFilters.length > 0 && (
-                <Badge className="ml-1 h-5 min-w-5 justify-center bg-amber-500 px-1.5 text-[10px] text-white hover:bg-amber-500">
-                  {activeFilters.length}
-                </Badge>
-              )}
-              {filtersOpen ? (
-                <FaIcon icon="chevron-up" className="text-xs" />
-              ) : (
-                <FaIcon icon="chevron-down" className="text-xs" />
-              )}
-            </Button>
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <FilterMultiSelect
+            label="State"
+            options={stateOptions}
+            selected={
+              params.states
+                ? params.states.split(",").map((s) => s.trim())
+                : []
+            }
+            onToggle={(v) => toggleMultiFilter("states", v)}
+          />
 
-            {/* Active filter badges */}
+          <FilterMultiSelect
+            label="Region"
+            options={regionOptions}
+            selected={
+              params.regions
+                ? params.regions.split(",").map((s) => s.trim())
+                : []
+            }
+            onToggle={(v) => toggleMultiFilter("regions", v)}
+          />
+
+          <FilterMultiSelect
+            label="Size"
+            options={SIZES}
+            selected={
+              params.sizes
+                ? params.sizes.split(",").map((s) => s.trim())
+                : []
+            }
+            onToggle={(v) => toggleMultiFilter("sizes", v)}
+          />
+
+          <FilterMultiSelect
+            label="Acceptance Rate"
+            options={acceptanceRangeOptions}
+            selected={
+              params.acceptanceRanges
+                ? params.acceptanceRanges.split(",").map((s) => s.trim())
+                : []
+            }
+            onToggle={(v) => toggleMultiFilter("acceptanceRanges", v)}
+          />
+
+          <FilterMultiSelect
+            label="Program"
+            options={programCategoryOptions}
+            selected={
+              params.programCategories
+                ? params.programCategories
+                    .split(",")
+                    .map((s) => s.trim())
+                : []
+            }
+            onToggle={(v) => toggleMultiFilter("programCategories", v)}
+          />
+        </div>
+
+        {/* Active filters + clear row */}
+        {activeFilters.length > 0 && (
+          <div className="mb-4 flex flex-wrap items-center gap-2">
             {activeFilters.map((f) => (
               <Badge
                 key={f.key}
@@ -727,22 +774,19 @@ function HomePageContent() {
                 </button>
               </Badge>
             ))}
-
-            {activeFilters.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearAllFilters}
-                className="text-muted-foreground hover:text-foreground h-7 px-2 text-xs"
-              >
-                Clear all
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearAllFilters}
+              className="text-muted-foreground hover:text-foreground h-7 px-2 text-xs"
+            >
+              Clear all
+            </Button>
 
             {/* Saved filters */}
             {savedFilters.length > 0 && (
               <div className="ml-auto flex items-center gap-1">
-                <FaIcon icon="bookmark" className="text-xs text-muted-foreground" />
+                <FaIcon icon="bookmark" style="duotone" className="text-xs text-muted-foreground" />
                 {savedFilters.map((sf) => (
                   <div key={sf.id} className="flex items-center">
                     <button
@@ -761,187 +805,54 @@ function HomePageContent() {
                 ))}
               </div>
             )}
+
+            {/* Save filter button */}
+            <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                >
+                  <FaIcon icon="floppy-disk" style="duotone" className="text-sm" />
+                  Save Filter
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Save Current Filter</DialogTitle>
+                  <DialogDescription>
+                    Name this filter combination to quickly load it later.
+                    You can save up to 5 filters.
+                  </DialogDescription>
+                </DialogHeader>
+                <Input
+                  value={saveFilterName}
+                  onChange={(e) => setSaveFilterName(e.target.value)}
+                  placeholder="e.g. Northeast Liberal Arts"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveCurrentFilter();
+                  }}
+                />
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setSaveDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={saveCurrentFilter}
+                    disabled={!saveFilterName.trim()}
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    Save
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
-
-          {/* Collapsible filter panel */}
-          {filtersOpen && (
-            <Card className="border-border">
-              <CardContent className="p-4 sm:p-6">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {/* State filter */}
-                  <FilterMultiSelect
-                    label="State"
-                    icon={<FaIcon icon="location-dot" className="text-xs" />}
-                    options={stateOptions}
-                    selected={
-                      params.states
-                        ? params.states.split(",").map((s) => s.trim())
-                        : []
-                    }
-                    onToggle={(v) => toggleMultiFilter("states", v)}
-                  />
-
-                  {/* Region filter */}
-                  <FilterMultiSelect
-                    label="Region"
-                    icon={<FaIcon icon="globe" className="text-xs" />}
-                    options={regionOptions}
-                    selected={
-                      params.regions
-                        ? params.regions.split(",").map((s) => s.trim())
-                        : []
-                    }
-                    onToggle={(v) => toggleMultiFilter("regions", v)}
-                  />
-
-                  {/* Type filter */}
-                  <FilterMultiSelect
-                    label="Type"
-                    icon={<FaIcon icon="building" className="text-xs" />}
-                    options={typeOptions}
-                    selected={
-                      params.types
-                        ? params.types.split(",").map((s) => s.trim())
-                        : []
-                    }
-                    onToggle={(v) => toggleMultiFilter("types", v)}
-                  />
-
-                  {/* Size filter */}
-                  <FilterMultiSelect
-                    label="Size"
-                    icon={<FaIcon icon="users" className="text-xs" />}
-                    options={SIZES}
-                    selected={
-                      params.sizes
-                        ? params.sizes.split(",").map((s) => s.trim())
-                        : []
-                    }
-                    onToggle={(v) => toggleMultiFilter("sizes", v)}
-                  />
-
-                  {/* Acceptance Range */}
-                  <FilterMultiSelect
-                    label="Acceptance Range"
-                    icon={<FaIcon icon="percent" className="text-xs" />}
-                    options={acceptanceRangeOptions}
-                    selected={
-                      params.acceptanceRanges
-                        ? params.acceptanceRanges.split(",").map((s) => s.trim())
-                        : []
-                    }
-                    onToggle={(v) => toggleMultiFilter("acceptanceRanges", v)}
-                  />
-
-                  {/* Program Category */}
-                  <FilterMultiSelect
-                    label="Program Category"
-                    icon={<FaIcon icon="book-open" className="text-xs" />}
-                    options={programCategoryOptions}
-                    selected={
-                      params.programCategories
-                        ? params.programCategories
-                            .split(",")
-                            .map((s) => s.trim())
-                        : []
-                    }
-                    onToggle={(v) => toggleMultiFilter("programCategories", v)}
-                  />
-
-                  {/* Jesuit Only toggle */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-                      <FaIcon icon="star" className="text-xs" />
-                      Jesuit
-                    </label>
-                    <button
-                      onClick={() =>
-                        updateParams({
-                          jesuitOnly:
-                            params.jesuitOnly === "true" ? undefined : "true",
-                        })
-                      }
-                      className={cn(
-                        "flex h-10 items-center gap-2 rounded-md border px-3 text-sm transition-colors",
-                        params.jesuitOnly === "true"
-                          ? "border-primary bg-primary/5 text-primary"
-                          : "border-border bg-white text-muted-foreground hover:border-gray-300"
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "h-4 w-8 rounded-full transition-colors",
-                          params.jesuitOnly === "true"
-                            ? "bg-primary"
-                            : "bg-gray-200"
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
-                            params.jesuitOnly === "true"
-                              ? "translate-x-4"
-                              : "translate-x-0"
-                          )}
-                        />
-                      </div>
-                      Jesuit Only
-                    </button>
-                  </div>
-                </div>
-
-                {/* Save filter button */}
-                <div className="mt-4 flex items-center justify-end gap-2 border-t border-border pt-4">
-                  <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5"
-                        disabled={activeFilters.length === 0}
-                      >
-                        <FaIcon icon="floppy-disk" className="text-sm" />
-                        Save Filter
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Save Current Filter</DialogTitle>
-                        <DialogDescription>
-                          Name this filter combination to quickly load it later.
-                          You can save up to 5 filters.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <Input
-                        value={saveFilterName}
-                        onChange={(e) => setSaveFilterName(e.target.value)}
-                        placeholder="e.g. Northeast Liberal Arts"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") saveCurrentFilter();
-                        }}
-                      />
-                      <DialogFooter>
-                        <Button
-                          variant="outline"
-                          onClick={() => setSaveDialogOpen(false)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={saveCurrentFilter}
-                          disabled={!saveFilterName.trim()}
-                          className="bg-primary hover:bg-primary/90"
-                        >
-                          Save
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        )}
 
         {/* ================================================================ */}
         {/* VIEW CONTROLS                                                     */}
@@ -1012,7 +923,7 @@ function HomePageContent() {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <FaIcon icon={faIcon} className="text-sm" />
+                  <FaIcon icon={faIcon} style="duotone" className="text-sm" />
                 </button>
               ))}
             </div>
@@ -1031,7 +942,7 @@ function HomePageContent() {
           </div>
         ) : collegesError ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <FaIcon icon="graduation-cap" className="text-4xl text-destructive/40 mb-4" />
+            <FaIcon icon="graduation-cap" style="duotone" className="text-4xl text-destructive/40 mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-1">
               Failed to load colleges
             </h3>
@@ -1044,7 +955,7 @@ function HomePageContent() {
           </div>
         ) : colleges.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <FaIcon icon="graduation-cap" className="text-4xl text-muted-foreground/40 mb-4" />
+            <FaIcon icon="graduation-cap" style="duotone" className="text-4xl text-muted-foreground/40 mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-1">
               No colleges found
             </h3>
@@ -1163,7 +1074,7 @@ function HomePageContent() {
                                 className="rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground hover:bg-gray-100"
                                 title="Visit website"
                               >
-                                <FaIcon icon="arrow-up-right-from-square" className="text-sm" />
+                                <FaIcon icon="arrow-up-right-from-square" style="duotone" className="text-sm" />
                               </a>
                             )}
                           </div>
@@ -1185,7 +1096,7 @@ function HomePageContent() {
                   >
                     {/* Image placeholder */}
                     <div className="relative h-36 bg-gradient-to-br from-primary/10 to-amber-50 flex items-center justify-center">
-                      <FaIcon icon="graduation-cap" className="text-4xl text-primary/20" />
+                      <FaIcon icon="graduation-cap" style="duotone" className="text-4xl text-primary/20" />
                       {college.jesuit && (
                         <Badge className="absolute top-2 left-2 bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100 text-[10px]">
                           Jesuit
@@ -1219,7 +1130,7 @@ function HomePageContent() {
                         {college.name}
                       </a>
                       <p className="mb-3 flex items-center gap-1 text-sm text-muted-foreground">
-                        <FaIcon icon="location-dot" className="text-xs shrink-0" />
+                        <FaIcon icon="location-dot" style="duotone" className="text-xs shrink-0" />
                         {college.city}, {college.state}
                       </p>
                       <div className="grid grid-cols-2 gap-2 text-xs">
@@ -1273,7 +1184,7 @@ function HomePageContent() {
                     <div className="flex flex-col sm:flex-row">
                       {/* Image placeholder */}
                       <div className="flex h-28 w-full sm:h-auto sm:w-48 shrink-0 items-center justify-center bg-gradient-to-br from-primary/10 to-amber-50 rounded-t-lg sm:rounded-l-lg sm:rounded-tr-none">
-                        <FaIcon icon="graduation-cap" className="text-3xl text-primary/20" />
+                        <FaIcon icon="graduation-cap" style="duotone" className="text-3xl text-primary/20" />
                       </div>
                       <div className="flex flex-1 items-start justify-between gap-4 p-4">
                         <div className="flex-1 min-w-0">
@@ -1291,7 +1202,7 @@ function HomePageContent() {
                             )}
                           </div>
                           <p className="mb-2 flex items-center gap-1 text-sm text-muted-foreground">
-                            <FaIcon icon="location-dot" className="text-xs shrink-0" />
+                            <FaIcon icon="location-dot" style="duotone" className="text-xs shrink-0" />
                             {college.city}, {college.state}
                             {college.type && (
                               <>
@@ -1308,15 +1219,15 @@ function HomePageContent() {
                           </p>
                           <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
-                              <FaIcon icon="dollar-sign" className="text-xs" />
+                              <FaIcon icon="dollar-sign" style="duotone" className="text-xs" />
                               {formatCurrency(college.tuitionInState)}
                             </span>
                             <span className="flex items-center gap-1">
-                              <FaIcon icon="percent" className="text-xs" />
+                              <FaIcon icon="percent" style="duotone" className="text-xs" />
                               {formatPercent(college.acceptanceRate)} acceptance
                             </span>
                             <span className="flex items-center gap-1">
-                              <FaIcon icon="users" className="text-xs" />
+                              <FaIcon icon="users" style="duotone" className="text-xs" />
                               {formatNumber(college.enrollment)} students
                             </span>
                           </div>
@@ -1358,7 +1269,7 @@ function HomePageContent() {
                               className="rounded-md p-1.5 text-muted-foreground transition-colors hover:text-foreground hover:bg-gray-100"
                               title="Visit website"
                             >
-                              <FaIcon icon="arrow-up-right-from-square" className="text-sm" />
+                              <FaIcon icon="arrow-up-right-from-square" style="duotone" className="text-sm" />
                             </a>
                           )}
                         </div>
@@ -1437,13 +1348,12 @@ function HomePageContent() {
 
 function FilterMultiSelect({
   label,
-  icon,
   options,
   selected,
   onToggle,
 }: {
   label: string;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   options: string[];
   selected: string[];
   onToggle: (value: string) => void;
@@ -1470,88 +1380,82 @@ function FilterMultiSelect({
     : options;
 
   return (
-    <div className="flex flex-col gap-1.5" ref={ref}>
-      <label className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-        {icon}
-        {label}
-      </label>
-      <div className="relative">
-        <button
-          onClick={() => setOpen(!open)}
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(!open)}
+        className={cn(
+          "flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm transition-colors whitespace-nowrap",
+          selected.length > 0
+            ? "border-primary bg-primary/5 text-primary font-medium"
+            : "border-border bg-white text-muted-foreground hover:border-gray-400 hover:text-foreground"
+        )}
+      >
+        <span>
+          {selected.length === 0
+            ? label
+            : selected.length === 1
+              ? selected[0]
+              : `${label} (${selected.length})`}
+        </span>
+        <FaIcon
+          icon="chevron-down"
           className={cn(
-            "flex h-10 w-full items-center justify-between rounded-md border px-3 text-sm transition-colors",
-            selected.length > 0
-              ? "border-primary bg-primary/5 text-foreground"
-              : "border-border bg-white text-muted-foreground hover:border-gray-300"
+            "text-[10px] shrink-0 transition-transform",
+            open && "rotate-180"
           )}
-        >
-          <span className="truncate">
-            {selected.length === 0
-              ? `All ${label}s`
-              : selected.length === 1
-                ? selected[0]
-                : `${selected.length} selected`}
-          </span>
-          <FaIcon
-            icon="chevron-down"
-            className={cn(
-              "text-sm shrink-0 transition-transform",
-              open && "rotate-180"
-            )}
-          />
-        </button>
-        {open && (
-          <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border border-border bg-white shadow-lg">
-            {options.length > 8 && (
-              <div className="p-2 border-b border-border">
-                <input
-                  type="text"
-                  value={filterText}
-                  onChange={(e) => setFilterText(e.target.value)}
-                  placeholder={`Search ${label.toLowerCase()}...`}
-                  className="h-8 w-full rounded-md border border-border px-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                  autoFocus
-                />
+        />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[200px] overflow-hidden rounded-lg border border-border bg-white shadow-lg">
+          {options.length > 8 && (
+            <div className="p-2 border-b border-border">
+              <input
+                type="text"
+                value={filterText}
+                onChange={(e) => setFilterText(e.target.value)}
+                placeholder={`Search ${label.toLowerCase()}...`}
+                className="h-8 w-full rounded-md border border-border px-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                autoFocus
+              />
+            </div>
+          )}
+          <div className="max-h-56 overflow-y-auto p-1">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-2 text-sm text-muted-foreground">
+                No options found
               </div>
-            )}
-            <div className="max-h-56 overflow-y-auto p-1">
-              {filtered.length === 0 ? (
-                <div className="px-3 py-2 text-sm text-muted-foreground">
-                  No options found
-                </div>
-              ) : (
-                filtered.map((option) => {
-                  const isSelected = selected.includes(option);
-                  return (
-                    <button
-                      key={option}
-                      onClick={() => onToggle(option)}
+            ) : (
+              filtered.map((option) => {
+                const isSelected = selected.includes(option);
+                return (
+                  <button
+                    key={option}
+                    onClick={() => onToggle(option)}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-sm px-3 py-1.5 text-sm transition-colors text-left",
+                      isSelected
+                        ? "bg-amber-50 text-foreground"
+                        : "text-foreground hover:bg-gray-50"
+                    )}
+                  >
+                    <div
                       className={cn(
-                        "flex w-full items-center gap-2 rounded-sm px-3 py-1.5 text-sm transition-colors text-left",
+                        "flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-colors",
                         isSelected
-                          ? "bg-amber-50 text-foreground"
-                          : "text-foreground hover:bg-gray-50"
+                          ? "border-primary bg-primary text-white"
+                          : "border-gray-300"
                       )}
                     >
-                      <div
-                        className={cn(
-                          "flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-colors",
-                          isSelected
-                            ? "border-primary bg-primary text-white"
-                            : "border-gray-300"
-                        )}
-                      >
-                        {isSelected && <FaIcon icon="check" className="text-[10px]" />}
-                      </div>
-                      <span className="truncate">{option}</span>
-                    </button>
-                  );
-                })
-              )}
-            </div>
+                      {isSelected && <FaIcon icon="check" className="text-[10px]" />}
+                    </div>
+                    <span className="truncate">{option}</span>
+                  </button>
+                );
+              })
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

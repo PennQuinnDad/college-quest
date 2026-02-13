@@ -16,7 +16,7 @@ export function formatCurrency(value: number | null): string {
 
 export function formatPercent(value: number | null): string {
   if (value == null) return "N/A";
-  return `${(value * 100).toFixed(1)}%`;
+  return `${value.toFixed(1)}%`;
 }
 
 export function formatNumber(value: number | null): string {
