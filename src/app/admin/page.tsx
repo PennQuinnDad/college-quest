@@ -3,22 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  Shield,
-  Building,
-  GraduationCap,
-  Plus,
-  Trash2,
-  Pencil,
-  Search,
-  Loader2,
-  ArrowLeft,
-  Mail,
-  Lock,
-  AlertCircle,
-  ExternalLink,
-  Users,
-} from "lucide-react";
+import { FaIcon } from "@/components/ui/fa-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -221,7 +206,7 @@ export default function AdminPage() {
               <div
                 className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-md"
               >
-                <Shield className="h-8 w-8 text-white" />
+                <FaIcon icon="shield-halved" style="solid" className="text-2xl text-white" />
               </div>
               <div className="space-y-1 text-center">
                 <CardTitle className="text-2xl font-bold tracking-tight">
@@ -235,14 +220,14 @@ export default function AdminPage() {
             <CardContent className="space-y-4 px-6 pb-8 pt-4">
               {authError && (
                 <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <FaIcon icon="circle-exclamation" style="solid" className="mt-0.5 text-sm shrink-0" />
                   <span>{authError}</span>
                 </div>
               )}
               <div className="space-y-2">
                 <Label htmlFor="admin-password">Password</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <FaIcon icon="lock" style="solid" className="absolute left-3 top-1/2 text-sm -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="admin-password"
                     type="password"
@@ -261,9 +246,9 @@ export default function AdminPage() {
                 disabled={authLoading || !passwordInput.trim()}
               >
                 {authLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <FaIcon icon="spinner" style="solid" className="mr-2 text-sm fa-spin" />
                 ) : (
-                  <Shield className="mr-2 h-4 w-4" />
+                  <FaIcon icon="shield-halved" style="solid" className="mr-2 text-sm" />
                 )}
                 Authenticate
               </Button>
@@ -293,13 +278,13 @@ export default function AdminPage() {
               href="/"
               className="flex items-center gap-2 text-sm font-medium text-white/80 transition-colors hover:text-white"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <FaIcon icon="arrow-left" style="solid" className="text-sm" />
               Home
             </Link>
             <Separator orientation="vertical" className="h-6 bg-white/20" />
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10">
-                <Shield className="h-5 w-5 text-white" />
+                <FaIcon icon="shield-halved" style="solid" className="text-lg text-white" />
               </div>
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-white">
@@ -327,15 +312,15 @@ export default function AdminPage() {
         <Tabs defaultValue="colleges">
           <TabsList className="mb-6 grid w-full grid-cols-3 lg:w-[400px]">
             <TabsTrigger value="colleges" className="gap-1.5">
-              <Building className="h-4 w-4" />
+              <FaIcon icon="building" style="solid" className="text-sm" />
               Colleges
             </TabsTrigger>
             <TabsTrigger value="schools" className="gap-1.5">
-              <GraduationCap className="h-4 w-4" />
+              <FaIcon icon="graduation-cap" style="solid" className="text-sm" />
               Schools
             </TabsTrigger>
             <TabsTrigger value="users" className="gap-1.5">
-              <Users className="h-4 w-4" />
+              <FaIcon icon="users" style="solid" className="text-sm" />
               Users
             </TabsTrigger>
           </TabsList>
@@ -502,7 +487,7 @@ function CollegesTab({ token }: { token: string }) {
       {/* Toolbar */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <FaIcon icon="magnifying-glass" style="solid" className="absolute left-3 top-1/2 text-sm -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search colleges..."
             value={search}
@@ -511,7 +496,7 @@ function CollegesTab({ token }: { token: string }) {
           />
         </div>
         <Button className="bg-primary" onClick={openAdd}>
-          <Plus className="mr-2 h-4 w-4" />
+          <FaIcon icon="plus" style="solid" className="mr-2 text-sm" />
           Add College
         </Button>
       </div>
@@ -520,7 +505,7 @@ function CollegesTab({ token }: { token: string }) {
       <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <FaIcon icon="spinner" style="solid" className="text-xl fa-spin text-muted-foreground" />
           </div>
         ) : colleges.length === 0 ? (
           <div className="py-16 text-center text-sm text-muted-foreground">
@@ -562,7 +547,7 @@ function CollegesTab({ token }: { token: string }) {
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button variant="ghost" size="icon" onClick={() => openEdit(c)} title="Edit">
-                          <Pencil className="h-4 w-4" />
+                          <FaIcon icon="pen" style="solid" className="text-sm" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -571,7 +556,7 @@ function CollegesTab({ token }: { token: string }) {
                           title="Delete"
                           className="text-destructive hover:text-destructive"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <FaIcon icon="trash-can" style="solid" className="text-sm" />
                         </Button>
                       </div>
                     </td>
@@ -769,7 +754,7 @@ function CollegesTab({ token }: { token: string }) {
               disabled={saveMutation.isPending}
             >
               {saveMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <FaIcon icon="spinner" style="solid" className="mr-2 text-sm fa-spin" />
               )}
               {editingCollege ? "Update" : "Create"}
             </Button>
@@ -798,7 +783,7 @@ function CollegesTab({ token }: { token: string }) {
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <FaIcon icon="spinner" style="solid" className="mr-2 text-sm fa-spin" />
               )}
               Delete
             </Button>
@@ -966,7 +951,7 @@ function SchoolsTab({ token }: { token: string }) {
       {/* Toolbar */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <FaIcon icon="magnifying-glass" style="solid" className="absolute left-3 top-1/2 text-sm -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search schools/programs..."
             value={search}
@@ -975,7 +960,7 @@ function SchoolsTab({ token }: { token: string }) {
           />
         </div>
         <Button className="bg-primary" onClick={openAdd}>
-          <Plus className="mr-2 h-4 w-4" />
+          <FaIcon icon="plus" style="solid" className="mr-2 text-sm" />
           Add School
         </Button>
       </div>
@@ -984,7 +969,7 @@ function SchoolsTab({ token }: { token: string }) {
       <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <FaIcon icon="spinner" style="solid" className="text-xl fa-spin text-muted-foreground" />
           </div>
         ) : filteredSchools.length === 0 ? (
           <div className="py-16 text-center text-sm text-muted-foreground">
@@ -1030,7 +1015,7 @@ function SchoolsTab({ token }: { token: string }) {
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-primary hover:underline"
                         >
-                          Visit <ExternalLink className="h-3 w-3" />
+                          Visit <FaIcon icon="arrow-up-right-from-square" style="solid" className="text-[10px]" />
                         </a>
                       ) : (
                         "--"
@@ -1039,7 +1024,7 @@ function SchoolsTab({ token }: { token: string }) {
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button variant="ghost" size="icon" onClick={() => openEdit(s)} title="Edit">
-                          <Pencil className="h-4 w-4" />
+                          <FaIcon icon="pen" style="solid" className="text-sm" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -1048,7 +1033,7 @@ function SchoolsTab({ token }: { token: string }) {
                           title="Delete"
                           className="text-destructive hover:text-destructive"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <FaIcon icon="trash-can" style="solid" className="text-sm" />
                         </Button>
                       </div>
                     </td>
@@ -1111,7 +1096,7 @@ function SchoolsTab({ token }: { token: string }) {
             <div className="space-y-2">
               <Label>College (search)</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <FaIcon icon="magnifying-glass" style="solid" className="absolute left-3 top-1/2 text-sm -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={collegeSearch}
                   onChange={(e) => {
@@ -1194,7 +1179,7 @@ function SchoolsTab({ token }: { token: string }) {
               disabled={saveMutation.isPending}
             >
               {saveMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <FaIcon icon="spinner" style="solid" className="mr-2 text-sm fa-spin" />
               )}
               {editingSchool ? "Update" : "Create"}
             </Button>
@@ -1223,7 +1208,7 @@ function SchoolsTab({ token }: { token: string }) {
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <FaIcon icon="spinner" style="solid" className="mr-2 text-sm fa-spin" />
               )}
               Delete
             </Button>
@@ -1313,7 +1298,7 @@ function UsersTab({ token }: { token: string }) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5 text-primary" />
+            <FaIcon icon="envelope" style="solid" className="text-lg text-primary" />
             Allowed Emails
           </CardTitle>
           <CardDescription>
@@ -1324,7 +1309,7 @@ function UsersTab({ token }: { token: string }) {
           {/* Add email */}
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <FaIcon icon="envelope" style="solid" className="absolute left-3 top-1/2 text-sm -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
@@ -1339,9 +1324,9 @@ function UsersTab({ token }: { token: string }) {
               disabled={addMutation.isPending || !newEmail.trim()}
             >
               {addMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <FaIcon icon="spinner" style="solid" className="mr-2 text-sm fa-spin" />
               ) : (
-                <Plus className="mr-2 h-4 w-4" />
+                <FaIcon icon="plus" style="solid" className="mr-2 text-sm" />
               )}
               Add
             </Button>
@@ -1352,7 +1337,7 @@ function UsersTab({ token }: { token: string }) {
           {/* Emails list */}
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <FaIcon icon="spinner" style="solid" className="text-xl fa-spin text-muted-foreground" />
             </div>
           ) : emails.length === 0 ? (
             <div className="py-8 text-center text-sm text-muted-foreground">
@@ -1367,7 +1352,7 @@ function UsersTab({ token }: { token: string }) {
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100">
-                      <Mail className="h-3.5 w-3.5 text-amber-800" />
+                      <FaIcon icon="envelope" style="solid" className="text-xs text-amber-800" />
                     </div>
                     <div>
                       <p className="text-sm font-medium">{entry.email}</p>
@@ -1383,7 +1368,7 @@ function UsersTab({ token }: { token: string }) {
                     className="text-destructive hover:text-destructive"
                     title="Remove email"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <FaIcon icon="trash-can" style="solid" className="text-sm" />
                   </Button>
                 </div>
               ))}
@@ -1417,7 +1402,7 @@ function UsersTab({ token }: { token: string }) {
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <FaIcon icon="spinner" style="solid" className="mr-2 text-sm fa-spin" />
               )}
               Remove
             </Button>

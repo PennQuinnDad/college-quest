@@ -3,20 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import {
-  GraduationCap,
-  Search,
-  ArrowLeft,
-  ExternalLink,
-  LayoutGrid,
-  LayoutList,
-  ArrowUpDown,
-  MapPin,
-  Building,
-  Loader2,
-  BookOpen,
-  AlertCircle,
-} from "lucide-react";
+import { FaIcon } from "@/components/ui/fa-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -188,13 +175,13 @@ export default function SchoolsPage() {
             href="/"
             className="flex items-center gap-2 text-sm font-medium text-white/80 transition-colors hover:text-white"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <FaIcon icon="arrow-left" style="solid" className="text-sm" />
             Home
           </Link>
           <Separator orientation="vertical" className="h-6 bg-white/20" />
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10">
-              <GraduationCap className="h-5 w-5 text-white" />
+              <FaIcon icon="graduation-cap" style="solid" className="text-lg text-white" />
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-white">
@@ -215,7 +202,7 @@ export default function SchoolsPage() {
           <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
             {/* Search */}
             <div className="relative w-full sm:max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <FaIcon icon="magnifying-glass" style="solid" className="absolute left-3 top-1/2 text-sm -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search programs..."
                 value={searchQuery}
@@ -247,7 +234,7 @@ export default function SchoolsPage() {
               onValueChange={(val) => setSortKey(val as SortKey)}
             >
               <SelectTrigger className="w-[160px]">
-                <ArrowUpDown className="mr-2 h-3.5 w-3.5" />
+                <FaIcon icon="arrow-up-arrow-down" style="solid" className="mr-2 text-xs" />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -263,7 +250,7 @@ export default function SchoolsPage() {
               onClick={() => setSortAsc((prev) => !prev)}
               title={sortAsc ? "Ascending" : "Descending"}
             >
-              <ArrowUpDown className={cn("h-4 w-4", !sortAsc && "rotate-180")} />
+              <FaIcon icon="arrow-up-arrow-down" style="solid" className={cn("text-sm", !sortAsc && "rotate-180")} />
             </Button>
 
             <Separator orientation="vertical" className="mx-1 h-8" />
@@ -275,7 +262,7 @@ export default function SchoolsPage() {
               title="Table View"
               className={cn(viewMode === "table" && "bg-primary")}
             >
-              <LayoutList className="h-4 w-4" />
+              <FaIcon icon="list" style="solid" className="text-sm" />
             </Button>
             <Button
               variant={viewMode === "grid" ? "default" : "outline"}
@@ -284,7 +271,7 @@ export default function SchoolsPage() {
               title="Grid View"
               className={cn(viewMode === "grid" && "bg-primary")}
             >
-              <LayoutGrid className="h-4 w-4" />
+              <FaIcon icon="grid-2" style="solid" className="text-sm" />
             </Button>
           </div>
         </div>
@@ -309,7 +296,7 @@ export default function SchoolsPage() {
         {/* Loading State */}
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-24">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <FaIcon icon="spinner" style="solid" className="text-2xl fa-spin text-muted-foreground" />
             <p className="mt-3 text-sm text-muted-foreground">Loading programs...</p>
           </div>
         )}
@@ -318,7 +305,7 @@ export default function SchoolsPage() {
         {!isLoading && hasError && (
           <Card className="mx-auto max-w-md">
             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <AlertCircle className="h-12 w-12 text-destructive/60" />
+              <FaIcon icon="circle-exclamation" style="solid" className="text-4xl text-destructive/60" />
               <h3 className="mt-4 text-lg font-medium text-foreground">
                 Something went wrong
               </h3>
@@ -332,7 +319,7 @@ export default function SchoolsPage() {
         {/* Empty State */}
         {!isLoading && !hasError && filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center py-24 text-center">
-            <BookOpen className="h-12 w-12 text-muted-foreground/40" />
+            <FaIcon icon="book-open" style="solid" className="text-4xl text-muted-foreground/40" />
             <h3 className="mt-4 text-lg font-medium text-foreground">
               No programs found
             </h3>
@@ -356,7 +343,7 @@ export default function SchoolsPage() {
                       <span className="flex items-center gap-1">
                         Program Name
                         {sortKey === "name" && (
-                          <ArrowUpDown className="h-3 w-3" />
+                          <FaIcon icon="arrow-up-arrow-down" style="solid" className="text-[10px]" />
                         )}
                       </span>
                     </th>
@@ -367,7 +354,7 @@ export default function SchoolsPage() {
                       <span className="flex items-center gap-1">
                         Category
                         {sortKey === "category" && (
-                          <ArrowUpDown className="h-3 w-3" />
+                          <FaIcon icon="arrow-up-arrow-down" style="solid" className="text-[10px]" />
                         )}
                       </span>
                     </th>
@@ -390,7 +377,7 @@ export default function SchoolsPage() {
                       <span className="flex items-center gap-1">
                         # Colleges
                         {sortKey === "colleges" && (
-                          <ArrowUpDown className="h-3 w-3" />
+                          <FaIcon icon="arrow-up-arrow-down" style="solid" className="text-[10px]" />
                         )}
                       </span>
                     </th>
@@ -441,7 +428,7 @@ export default function SchoolsPage() {
                               onClick={(e) => e.stopPropagation()}
                             >
                               Visit
-                              <ExternalLink className="h-3 w-3" />
+                              <FaIcon icon="arrow-up-right-from-square" style="solid" className="text-[10px]" />
                             </a>
                           ) : (
                             <span className="text-muted-foreground">--</span>
@@ -494,13 +481,13 @@ export default function SchoolsPage() {
                     <div className="space-y-2 text-sm text-muted-foreground">
                       {first?.collegeName && (
                         <div className="flex items-center gap-2">
-                          <Building className="h-3.5 w-3.5 shrink-0" />
+                          <FaIcon icon="building" style="solid" className="text-xs shrink-0" />
                           <span className="truncate">{first.collegeName}</span>
                         </div>
                       )}
                       {(first?.collegeCity || first?.collegeState) && (
                         <div className="flex items-center gap-2">
-                          <MapPin className="h-3.5 w-3.5 shrink-0" />
+                          <FaIcon icon="location-dot" style="solid" className="text-xs shrink-0" />
                           <span>
                             {first.collegeCity && first.collegeState
                               ? `${first.collegeCity}, ${first.collegeState}`
@@ -530,7 +517,7 @@ export default function SchoolsPage() {
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2 text-xl">
-                  <GraduationCap className="h-5 w-5 text-primary" />
+                  <FaIcon icon="graduation-cap" style="solid" className="text-lg text-primary" />
                   {selectedProgram.name}
                 </DialogTitle>
                 <DialogDescription>
@@ -563,7 +550,7 @@ export default function SchoolsPage() {
                       </p>
                       {(college.collegeCity || college.collegeState) && (
                         <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <MapPin className="h-3.5 w-3.5" />
+                          <FaIcon icon="location-dot" style="solid" className="text-xs" />
                           {college.collegeCity && college.collegeState
                             ? `${college.collegeCity}, ${college.collegeState}`
                             : college.collegeState || college.collegeCity}
@@ -583,7 +570,7 @@ export default function SchoolsPage() {
                         className="shrink-0"
                       >
                         <Button variant="outline" size="sm">
-                          <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                          <FaIcon icon="arrow-up-right-from-square" style="solid" className="mr-1.5 text-xs" />
                           Website
                         </Button>
                       </a>

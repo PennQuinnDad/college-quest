@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import * as ToastPrimitive from "@radix-ui/react-toast";
-import { X } from "lucide-react";
+import { FaIcon } from "@/components/ui/fa-icon";
 import { cn } from "@/lib/utils";
 
 const ToastProvider = ToastPrimitive.Provider;
@@ -70,7 +70,7 @@ export function Toaster() {
             )}
           </div>
           <ToastPrimitive.Close className="absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100">
-            <X className="h-4 w-4" />
+            <FaIcon icon="xmark" className="text-sm" />
           </ToastPrimitive.Close>
         </ToastPrimitive.Root>
       ))}

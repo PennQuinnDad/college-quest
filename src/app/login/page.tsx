@@ -2,7 +2,6 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { GraduationCap, AlertCircle, Loader2 } from "lucide-react";
 import { FaIcon } from "@/components/ui/fa-icon";
 import { Button } from "@/components/ui/button";
 import {
@@ -109,7 +108,7 @@ function LoginPageContent() {
           <CardHeader className="items-center space-y-4 pb-2 pt-8">
             {/* Logo */}
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-md">
-              <GraduationCap className="h-8 w-8 text-white" strokeWidth={1.75} />
+              <FaIcon icon="graduation-cap" className="text-2xl text-white" />
             </div>
 
             <div className="space-y-1 text-center">
@@ -126,7 +125,7 @@ function LoginPageContent() {
             {/* Error message */}
             {errorMessage && (
               <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <FaIcon icon="circle-exclamation" className="mt-0.5 text-sm shrink-0" />
                 <span>{errorMessage}</span>
               </div>
             )}
@@ -149,7 +148,7 @@ function LoginPageContent() {
                   onClick={() => handleOAuthLogin(id)}
                 >
                   {isLoading ? (
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    <FaIcon icon="spinner" className="mr-2 text-lg fa-spin" />
                   ) : (
                     <FaIcon icon={faIcon} style="brands" className="mr-2 text-lg" />
                   )}

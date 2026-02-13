@@ -3,21 +3,7 @@
 import { use, useCallback } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  MapPin,
-  ExternalLink,
-  Heart,
-  ArrowLeft,
-  GraduationCap,
-  Building,
-  Users,
-  DollarSign,
-  TrendingUp,
-  BookOpen,
-  Target,
-  Award,
-  Loader2,
-} from "lucide-react";
+import { FaIcon } from "@/components/ui/fa-icon";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -183,7 +169,7 @@ export default function CollegeDetailPage({
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <FaIcon icon="spinner" style="solid" className="text-2xl fa-spin text-primary" />
           <p className="text-sm text-muted-foreground">Loading college details...</p>
         </div>
       </div>
@@ -193,7 +179,7 @@ export default function CollegeDetailPage({
   if (collegeError || !college) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background">
-        <GraduationCap className="h-12 w-12 text-muted-foreground" />
+        <FaIcon icon="graduation-cap" style="solid" className="text-4xl text-muted-foreground" />
         <h2 className="text-xl font-semibold text-foreground">
           College not found
         </h2>
@@ -202,7 +188,7 @@ export default function CollegeDetailPage({
         </p>
         <Button asChild variant="outline">
           <Link href="/">
-            <ArrowLeft className="h-4 w-4" />
+            <FaIcon icon="arrow-left" style="solid" className="text-sm" />
             Back to Home
           </Link>
         </Button>
@@ -226,43 +212,43 @@ export default function CollegeDetailPage({
 
   const stats: StatCardProps[] = [
     {
-      icon: <DollarSign className="h-4 w-4" />,
+      icon: <FaIcon icon="dollar-sign" style="solid" className="text-sm" />,
       label: "Tuition (In-State)",
       value: formatCurrency(college.tuitionInState),
     },
     {
-      icon: <DollarSign className="h-4 w-4" />,
+      icon: <FaIcon icon="dollar-sign" style="solid" className="text-sm" />,
       label: "Tuition (Out-of-State)",
       value: formatCurrency(college.tuitionOutOfState),
     },
     {
-      icon: <DollarSign className="h-4 w-4" />,
+      icon: <FaIcon icon="dollar-sign" style="solid" className="text-sm" />,
       label: "Net Cost",
       value: formatCurrency(college.netCost),
     },
     {
-      icon: <Target className="h-4 w-4" />,
+      icon: <FaIcon icon="bullseye" style="solid" className="text-sm" />,
       label: "Acceptance Rate",
       value: formatPercent(college.acceptanceRate),
     },
     {
-      icon: <Users className="h-4 w-4" />,
+      icon: <FaIcon icon="users" style="solid" className="text-sm" />,
       label: "Enrollment",
       value: formatNumber(college.enrollment),
     },
     {
-      icon: <BookOpen className="h-4 w-4" />,
+      icon: <FaIcon icon="book-open" style="solid" className="text-sm" />,
       label: "SAT Math",
       value: college.satMath != null ? formatNumber(college.satMath) : "N/A",
     },
     {
-      icon: <BookOpen className="h-4 w-4" />,
+      icon: <FaIcon icon="book-open" style="solid" className="text-sm" />,
       label: "SAT Reading",
       value:
         college.satReading != null ? formatNumber(college.satReading) : "N/A",
     },
     {
-      icon: <TrendingUp className="h-4 w-4" />,
+      icon: <FaIcon icon="chart-line" style="solid" className="text-sm" />,
       label: "ACT Composite",
       value:
         college.actComposite != null
@@ -270,7 +256,7 @@ export default function CollegeDetailPage({
           : "N/A",
     },
     {
-      icon: <Award className="h-4 w-4" />,
+      icon: <FaIcon icon="award" style="solid" className="text-sm" />,
       label: "Graduation Rate",
       value: formatPercent(college.graduationRate),
     },
@@ -285,7 +271,7 @@ export default function CollegeDetailPage({
         <div className="mb-6 flex items-center justify-between">
           <Button asChild variant="ghost" size="sm">
             <Link href="/">
-              <ArrowLeft className="h-4 w-4" />
+              <FaIcon icon="arrow-left" style="solid" className="text-sm" />
               Back
             </Link>
           </Button>
@@ -301,10 +287,12 @@ export default function CollegeDetailPage({
                 "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
             )}
           >
-            <Heart
+            <FaIcon
+              icon="heart"
+              style={isFavorite ? "solid" : "regular"}
               className={cn(
-                "h-4 w-4",
-                isFavorite ? "fill-amber-500 text-amber-500" : "text-muted-foreground"
+                "text-sm",
+                isFavorite ? "text-amber-500" : "text-muted-foreground"
               )}
             />
             {isFavorite ? "Saved" : "Save"}
@@ -320,7 +308,7 @@ export default function CollegeDetailPage({
           <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
             {locationParts && (
               <span className="inline-flex items-center gap-1.5">
-                <MapPin className="h-4 w-4 text-primary" />
+                <FaIcon icon="location-dot" style="solid" className="text-sm text-primary" />
                 {locationParts}
               </span>
             )}
@@ -332,7 +320,7 @@ export default function CollegeDetailPage({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-primary underline-offset-4 hover:underline"
               >
-                <ExternalLink className="h-4 w-4" />
+                <FaIcon icon="arrow-up-right-from-square" style="solid" className="text-sm" />
                 Visit Website
               </a>
             )}
@@ -342,25 +330,25 @@ export default function CollegeDetailPage({
           <div className="mt-4 flex flex-wrap items-center gap-2">
             {college.type && (
               <Badge variant="secondary" className="gap-1">
-                <Building className="h-3 w-3" />
+                <FaIcon icon="building" style="solid" className="text-[10px]" />
                 {college.type}
               </Badge>
             )}
             {college.size && (
               <Badge variant="secondary" className="gap-1">
-                <Users className="h-3 w-3" />
+                <FaIcon icon="users" style="solid" className="text-[10px]" />
                 {college.size}
               </Badge>
             )}
             {college.region && (
               <Badge variant="outline" className="gap-1">
-                <MapPin className="h-3 w-3" />
+                <FaIcon icon="location-dot" style="solid" className="text-[10px]" />
                 {college.region}
               </Badge>
             )}
             {college.jesuit && (
               <Badge className="gap-1 border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-100">
-                <GraduationCap className="h-3 w-3" />
+                <FaIcon icon="graduation-cap" style="solid" className="text-[10px]" />
                 Jesuit
               </Badge>
             )}
@@ -436,7 +424,7 @@ export default function CollegeDetailPage({
 
           {similarLoading ? (
             <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <FaIcon icon="spinner" style="solid" className="text-sm fa-spin" />
               Loading similar colleges...
             </div>
           ) : similarColleges && similarColleges.length > 0 ? (
@@ -453,7 +441,7 @@ export default function CollegeDetailPage({
                         {similar.name}
                       </CardTitle>
                       <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <MapPin className="h-3 w-3" />
+                        <FaIcon icon="location-dot" style="solid" className="text-[10px]" />
                         {similar.city}, {similar.state}
                       </p>
                     </CardHeader>
@@ -502,7 +490,7 @@ export default function CollegeDetailPage({
                       </div>
                       {similar.jesuit && (
                         <Badge className="mt-3 gap-1 border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-100 text-[10px]">
-                          <GraduationCap className="h-2.5 w-2.5" />
+                          <FaIcon icon="graduation-cap" style="solid" className="text-[10px]" />
                           Jesuit
                         </Badge>
                       )}

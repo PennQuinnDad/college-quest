@@ -3,38 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  GraduationCap,
-  Search,
-  X,
-  ChevronDown,
-  ChevronUp,
-  SlidersHorizontal,
-  LayoutGrid,
-  List,
-  Table2,
-  Heart,
-  ExternalLink,
-  ArrowUp,
-  ArrowDown,
-  ChevronLeft,
-  ChevronRight,
-  Save,
-  Trash2,
-  Copy,
-  Check,
-  LogIn,
-  LogOut,
-  Star,
-  MapPin,
-  Users,
-  DollarSign,
-  Percent,
-  Building2,
-  BookOpen,
-  Bookmark,
-  Globe,
-} from "lucide-react";
+import { FaIcon } from "@/components/ui/fa-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -539,7 +508,7 @@ function HomePageContent() {
   }
 
   // ---- Render helpers ----
-  const sortIcon = params.sortOrder === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />;
+  const sortIcon = params.sortOrder === "asc" ? <FaIcon icon="arrow-up" className="text-xs" /> : <FaIcon icon="arrow-down" className="text-xs" />;
 
   return (
     <div className="min-h-screen bg-background">
@@ -551,7 +520,7 @@ function HomePageContent() {
           {/* Logo */}
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <GraduationCap className="h-5 w-5 text-white" />
+              <FaIcon icon="graduation-cap" className="text-lg text-white" />
             </div>
             <span className="text-xl font-bold tracking-tight text-primary">
               College Quest
@@ -572,11 +541,10 @@ function HomePageContent() {
                     "bg-primary hover:bg-primary/90 text-white"
                 )}
               >
-                <Heart
-                  className={cn(
-                    "h-4 w-4",
-                    showFavoritesOnly && "fill-current"
-                  )}
+                <FaIcon
+                  icon="heart"
+                  style={showFavoritesOnly ? "solid" : "regular"}
+                  className="text-sm"
                 />
                 <span className="hidden sm:inline">Favorites</span>
                 {favoriteIds.size > 0 && (
@@ -604,9 +572,9 @@ function HomePageContent() {
                 className="gap-1.5"
               >
                 {exportCopied ? (
-                  <Check className="h-4 w-4 text-green-600" />
+                  <FaIcon icon="check" className="text-sm text-green-600" />
                 ) : (
-                  <Copy className="h-4 w-4" />
+                  <FaIcon icon="copy" style="regular" className="text-sm" />
                 )}
                 <span className="hidden sm:inline">
                   {exportCopied ? "Copied!" : "Export"}
@@ -624,7 +592,7 @@ function HomePageContent() {
                   href="/auth/signout"
                   className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  <LogOut className="h-4 w-4" />
+                  <FaIcon icon="right-from-bracket" className="text-sm" />
                   <span className="hidden sm:inline">Sign out</span>
                 </a>
               </div>
@@ -633,7 +601,7 @@ function HomePageContent() {
                 href="/login"
                 className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
               >
-                <LogIn className="h-4 w-4" />
+                <FaIcon icon="right-to-bracket" className="text-sm" />
                 Log in
               </a>
             )}
@@ -647,7 +615,7 @@ function HomePageContent() {
         {/* ================================================================ */}
         <div className="relative mb-6">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+            <FaIcon icon="magnifying-glass" className="pointer-events-none absolute left-3.5 top-1/2 text-lg -translate-y-1/2 text-muted-foreground" />
             <input
               ref={searchInputRef}
               type="text"
@@ -675,7 +643,7 @@ function HomePageContent() {
                   }}
                   className="rounded-md p-1.5 text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  <X className="h-4 w-4" />
+                  <FaIcon icon="xmark" className="text-sm" />
                 </button>
               )}
               <Button
@@ -709,7 +677,7 @@ function HomePageContent() {
                       : "text-foreground hover:bg-gray-50"
                   )}
                 >
-                  <GraduationCap className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <FaIcon icon="graduation-cap" className="text-sm shrink-0 text-muted-foreground" />
                   <span>{item.name}</span>
                 </button>
               ))}
@@ -729,7 +697,7 @@ function HomePageContent() {
               onClick={() => setFiltersOpen(!filtersOpen)}
               className="gap-1.5"
             >
-              <SlidersHorizontal className="h-4 w-4" />
+              <FaIcon icon="sliders" className="text-sm" />
               Filters
               {activeFilters.length > 0 && (
                 <Badge className="ml-1 h-5 min-w-5 justify-center bg-amber-500 px-1.5 text-[10px] text-white hover:bg-amber-500">
@@ -737,9 +705,9 @@ function HomePageContent() {
                 </Badge>
               )}
               {filtersOpen ? (
-                <ChevronUp className="h-3.5 w-3.5" />
+                <FaIcon icon="chevron-up" className="text-xs" />
               ) : (
-                <ChevronDown className="h-3.5 w-3.5" />
+                <FaIcon icon="chevron-down" className="text-xs" />
               )}
             </Button>
 
@@ -755,7 +723,7 @@ function HomePageContent() {
                   onClick={() => removeFilter(f.paramKey, f.value)}
                   className="ml-0.5 rounded-full p-0.5 hover:bg-amber-200"
                 >
-                  <X className="h-3 w-3" />
+                  <FaIcon icon="xmark" className="text-[10px]" />
                 </button>
               </Badge>
             ))}
@@ -774,7 +742,7 @@ function HomePageContent() {
             {/* Saved filters */}
             {savedFilters.length > 0 && (
               <div className="ml-auto flex items-center gap-1">
-                <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
+                <FaIcon icon="bookmark" className="text-xs text-muted-foreground" />
                 {savedFilters.map((sf) => (
                   <div key={sf.id} className="flex items-center">
                     <button
@@ -787,7 +755,7 @@ function HomePageContent() {
                       onClick={() => deleteSavedFilter(sf.id)}
                       className="rounded p-0.5 text-muted-foreground hover:text-destructive"
                     >
-                      <X className="h-3 w-3" />
+                      <FaIcon icon="xmark" className="text-[10px]" />
                     </button>
                   </div>
                 ))}
@@ -803,7 +771,7 @@ function HomePageContent() {
                   {/* State filter */}
                   <FilterMultiSelect
                     label="State"
-                    icon={<MapPin className="h-3.5 w-3.5" />}
+                    icon={<FaIcon icon="location-dot" className="text-xs" />}
                     options={stateOptions}
                     selected={
                       params.states
@@ -816,7 +784,7 @@ function HomePageContent() {
                   {/* Region filter */}
                   <FilterMultiSelect
                     label="Region"
-                    icon={<Globe className="h-3.5 w-3.5" />}
+                    icon={<FaIcon icon="globe" className="text-xs" />}
                     options={regionOptions}
                     selected={
                       params.regions
@@ -829,7 +797,7 @@ function HomePageContent() {
                   {/* Type filter */}
                   <FilterMultiSelect
                     label="Type"
-                    icon={<Building2 className="h-3.5 w-3.5" />}
+                    icon={<FaIcon icon="building" className="text-xs" />}
                     options={typeOptions}
                     selected={
                       params.types
@@ -842,7 +810,7 @@ function HomePageContent() {
                   {/* Size filter */}
                   <FilterMultiSelect
                     label="Size"
-                    icon={<Users className="h-3.5 w-3.5" />}
+                    icon={<FaIcon icon="users" className="text-xs" />}
                     options={SIZES}
                     selected={
                       params.sizes
@@ -855,7 +823,7 @@ function HomePageContent() {
                   {/* Acceptance Range */}
                   <FilterMultiSelect
                     label="Acceptance Range"
-                    icon={<Percent className="h-3.5 w-3.5" />}
+                    icon={<FaIcon icon="percent" className="text-xs" />}
                     options={acceptanceRangeOptions}
                     selected={
                       params.acceptanceRanges
@@ -868,7 +836,7 @@ function HomePageContent() {
                   {/* Program Category */}
                   <FilterMultiSelect
                     label="Program Category"
-                    icon={<BookOpen className="h-3.5 w-3.5" />}
+                    icon={<FaIcon icon="book-open" className="text-xs" />}
                     options={programCategoryOptions}
                     selected={
                       params.programCategories
@@ -883,7 +851,7 @@ function HomePageContent() {
                   {/* Jesuit Only toggle */}
                   <div className="flex flex-col gap-1.5">
                     <label className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-                      <Star className="h-3.5 w-3.5" />
+                      <FaIcon icon="star" className="text-xs" />
                       Jesuit
                     </label>
                     <button
@@ -932,7 +900,7 @@ function HomePageContent() {
                         className="gap-1.5"
                         disabled={activeFilters.length === 0}
                       >
-                        <Save className="h-4 w-4" />
+                        <FaIcon icon="floppy-disk" className="text-sm" />
                         Save Filter
                       </Button>
                     </DialogTrigger>
@@ -1029,10 +997,10 @@ function HomePageContent() {
             {/* View mode */}
             <div className="flex items-center rounded-lg border border-border bg-white p-0.5">
               {([
-                { mode: "table" as ViewMode, icon: Table2, label: "Table" },
-                { mode: "grid" as ViewMode, icon: LayoutGrid, label: "Grid" },
-                { mode: "list" as ViewMode, icon: List, label: "List" },
-              ] as const).map(({ mode, icon: Icon, label }) => (
+                { mode: "table" as ViewMode, faIcon: "table", label: "Table" },
+                { mode: "grid" as ViewMode, faIcon: "grid-2", label: "Grid" },
+                { mode: "list" as ViewMode, faIcon: "list", label: "List" },
+              ] as const).map(({ mode, faIcon, label }) => (
                 <button
                   key={mode}
                   onClick={() => setViewMode(mode)}
@@ -1044,7 +1012,7 @@ function HomePageContent() {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <FaIcon icon={faIcon} className="text-sm" />
                 </button>
               ))}
             </div>
@@ -1063,7 +1031,7 @@ function HomePageContent() {
           </div>
         ) : collegesError ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <GraduationCap className="h-12 w-12 text-destructive/40 mb-4" />
+            <FaIcon icon="graduation-cap" className="text-4xl text-destructive/40 mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-1">
               Failed to load colleges
             </h3>
@@ -1076,7 +1044,7 @@ function HomePageContent() {
           </div>
         ) : colleges.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <GraduationCap className="h-12 w-12 text-muted-foreground/40 mb-4" />
+            <FaIcon icon="graduation-cap" className="text-4xl text-muted-foreground/40 mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-1">
               No colleges found
             </h3>
@@ -1171,11 +1139,13 @@ function HomePageContent() {
                                     : "Add to favorites"
                                 }
                               >
-                                <Heart
+                                <FaIcon
+                                  icon="heart"
+                                  style={favoriteIds.has(college.id) ? "solid" : "regular"}
                                   className={cn(
-                                    "h-4 w-4",
+                                    "text-sm",
                                     favoriteIds.has(college.id)
-                                      ? "fill-red-500 text-red-500"
+                                      ? "text-red-500"
                                       : "text-muted-foreground"
                                   )}
                                 />
@@ -1193,7 +1163,7 @@ function HomePageContent() {
                                 className="rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground hover:bg-gray-100"
                                 title="Visit website"
                               >
-                                <ExternalLink className="h-4 w-4" />
+                                <FaIcon icon="arrow-up-right-from-square" className="text-sm" />
                               </a>
                             )}
                           </div>
@@ -1215,7 +1185,7 @@ function HomePageContent() {
                   >
                     {/* Image placeholder */}
                     <div className="relative h-36 bg-gradient-to-br from-primary/10 to-amber-50 flex items-center justify-center">
-                      <GraduationCap className="h-12 w-12 text-primary/20" />
+                      <FaIcon icon="graduation-cap" className="text-4xl text-primary/20" />
                       {college.jesuit && (
                         <Badge className="absolute top-2 left-2 bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100 text-[10px]">
                           Jesuit
@@ -1228,11 +1198,13 @@ function HomePageContent() {
                           }
                           className="absolute top-2 right-2 rounded-full bg-white/90 p-1.5 shadow-sm transition-colors hover:bg-white"
                         >
-                          <Heart
+                          <FaIcon
+                            icon="heart"
+                            style={favoriteIds.has(college.id) ? "solid" : "regular"}
                             className={cn(
-                              "h-4 w-4",
+                              "text-sm",
                               favoriteIds.has(college.id)
-                                ? "fill-red-500 text-red-500"
+                                ? "text-red-500"
                                 : "text-muted-foreground"
                             )}
                           />
@@ -1247,7 +1219,7 @@ function HomePageContent() {
                         {college.name}
                       </a>
                       <p className="mb-3 flex items-center gap-1 text-sm text-muted-foreground">
-                        <MapPin className="h-3.5 w-3.5 shrink-0" />
+                        <FaIcon icon="location-dot" className="text-xs shrink-0" />
                         {college.city}, {college.state}
                       </p>
                       <div className="grid grid-cols-2 gap-2 text-xs">
@@ -1301,7 +1273,7 @@ function HomePageContent() {
                     <div className="flex flex-col sm:flex-row">
                       {/* Image placeholder */}
                       <div className="flex h-28 w-full sm:h-auto sm:w-48 shrink-0 items-center justify-center bg-gradient-to-br from-primary/10 to-amber-50 rounded-t-lg sm:rounded-l-lg sm:rounded-tr-none">
-                        <GraduationCap className="h-10 w-10 text-primary/20" />
+                        <FaIcon icon="graduation-cap" className="text-3xl text-primary/20" />
                       </div>
                       <div className="flex flex-1 items-start justify-between gap-4 p-4">
                         <div className="flex-1 min-w-0">
@@ -1319,7 +1291,7 @@ function HomePageContent() {
                             )}
                           </div>
                           <p className="mb-2 flex items-center gap-1 text-sm text-muted-foreground">
-                            <MapPin className="h-3.5 w-3.5 shrink-0" />
+                            <FaIcon icon="location-dot" className="text-xs shrink-0" />
                             {college.city}, {college.state}
                             {college.type && (
                               <>
@@ -1336,15 +1308,15 @@ function HomePageContent() {
                           </p>
                           <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
-                              <DollarSign className="h-3.5 w-3.5" />
+                              <FaIcon icon="dollar-sign" className="text-xs" />
                               {formatCurrency(college.tuitionInState)}
                             </span>
                             <span className="flex items-center gap-1">
-                              <Percent className="h-3.5 w-3.5" />
+                              <FaIcon icon="percent" className="text-xs" />
                               {formatPercent(college.acceptanceRate)} acceptance
                             </span>
                             <span className="flex items-center gap-1">
-                              <Users className="h-3.5 w-3.5" />
+                              <FaIcon icon="users" className="text-xs" />
                               {formatNumber(college.enrollment)} students
                             </span>
                           </div>
@@ -1362,11 +1334,13 @@ function HomePageContent() {
                                   : "Add to favorites"
                               }
                             >
-                              <Heart
+                              <FaIcon
+                                icon="heart"
+                                style={favoriteIds.has(college.id) ? "solid" : "regular"}
                                 className={cn(
-                                  "h-4 w-4",
+                                  "text-sm",
                                   favoriteIds.has(college.id)
-                                    ? "fill-red-500 text-red-500"
+                                    ? "text-red-500"
                                     : "text-muted-foreground"
                                 )}
                               />
@@ -1384,7 +1358,7 @@ function HomePageContent() {
                               className="rounded-md p-1.5 text-muted-foreground transition-colors hover:text-foreground hover:bg-gray-100"
                               title="Visit website"
                             >
-                              <ExternalLink className="h-4 w-4" />
+                              <FaIcon icon="arrow-up-right-from-square" className="text-sm" />
                             </a>
                           )}
                         </div>
@@ -1407,7 +1381,7 @@ function HomePageContent() {
                   onClick={() => updateParams({ page: currentPage - 1 })}
                   className="gap-1"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <FaIcon icon="chevron-left" className="text-sm" />
                   <span className="hidden sm:inline">Previous</span>
                 </Button>
 
@@ -1446,7 +1420,7 @@ function HomePageContent() {
                   className="gap-1"
                 >
                   <span className="hidden sm:inline">Next</span>
-                  <ChevronRight className="h-4 w-4" />
+                  <FaIcon icon="chevron-right" className="text-sm" />
                 </Button>
               </div>
             )}
@@ -1518,9 +1492,10 @@ function FilterMultiSelect({
                 ? selected[0]
                 : `${selected.length} selected`}
           </span>
-          <ChevronDown
+          <FaIcon
+            icon="chevron-down"
             className={cn(
-              "h-4 w-4 shrink-0 transition-transform",
+              "text-sm shrink-0 transition-transform",
               open && "rotate-180"
             )}
           />
@@ -1566,7 +1541,7 @@ function FilterMultiSelect({
                             : "border-gray-300"
                         )}
                       >
-                        {isSelected && <Check className="h-3 w-3" />}
+                        {isSelected && <FaIcon icon="check" className="text-[10px]" />}
                       </div>
                       <span className="truncate">{option}</span>
                     </button>
