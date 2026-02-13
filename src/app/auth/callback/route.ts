@@ -6,6 +6,14 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/";
 
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
+  const isLocalEnv = process.env.NODE_ENV === "development";
+
+  const base = !isLocalEnv && forwardedHost
+    ? `${forwardedProto}://${forwardedHost}`
+    : origin;
+
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -27,24 +35,13 @@ export async function GET(request: NextRequest) {
         if (!allowed || allowed.length === 0) {
           // Sign out unauthorized user
           await supabase.auth.signOut();
-          return NextResponse.redirect(
-            `${origin}/login?error=unauthorized`
-          );
+          return NextResponse.redirect(`${base}/login?error=unauthorized`);
         }
       }
 
-      const forwardedHost = request.headers.get("x-forwarded-host");
-      const isLocalEnv = process.env.NODE_ENV === "development";
-
-      if (isLocalEnv) {
-        return NextResponse.redirect(`${origin}${next}`);
-      } else if (forwardedHost) {
-        return NextResponse.redirect(`https://${forwardedHost}${next}`);
-      } else {
-        return NextResponse.redirect(`${origin}${next}`);
-      }
+      return NextResponse.redirect(`${base}${next}`);
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth`);
+  return NextResponse.redirect(`${base}/login?error=auth`);
 }
