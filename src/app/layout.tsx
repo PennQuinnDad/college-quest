@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryProvider } from "@/components/providers/query-provider";
@@ -17,10 +16,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <Script
-          src="https://kit.fontawesome.com/1d0e709f89.js"
+        <link
+          rel="stylesheet"
+          href="https://ka-p.fontawesome.com/releases/v7.2.0/css/pro.min.css?token=1d0e709f89"
           crossOrigin="anonymous"
-          strategy="beforeInteractive"
         />
       </head>
       <body>
