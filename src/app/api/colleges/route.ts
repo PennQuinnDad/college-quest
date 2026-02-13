@@ -72,6 +72,9 @@ export async function GET(request: NextRequest) {
     if (programCollegeIds) {
       dbQuery = dbQuery.in("id", programCollegeIds);
     }
+    if (favoriteIds) {
+      dbQuery = dbQuery.in("id", favoriteIds.split(",").map((id) => id.trim()));
+    }
 
     // Acceptance rate ranges
     if (acceptanceRanges) {
