@@ -1,0 +1,265 @@
+{
+  "version": 3,
+  "pages404": true,
+  "appType": "app",
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "priority": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/api/admin/colleges/[id]",
+      "regex": "^/api/admin/colleges/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/colleges/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/schools/[id]",
+      "regex": "^/api/admin/schools/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/schools/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/colleges/[id]",
+      "regex": "^/api/colleges/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/colleges/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/colleges/[id]/similar",
+      "regex": "^/api/colleges/([^/]+?)/similar(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/colleges/(?<nxtPid>[^/]+?)/similar(?:/)?$"
+    },
+    {
+      "page": "/api/favorites/[collegeId]",
+      "regex": "^/api/favorites/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPcollegeId": "nxtPcollegeId"
+      },
+      "namedRegex": "^/api/favorites/(?<nxtPcollegeId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/folders/[folderId]",
+      "regex": "^/api/folders/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPfolderId": "nxtPfolderId"
+      },
+      "namedRegex": "^/api/folders/(?<nxtPfolderId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/folders/[folderId]/items",
+      "regex": "^/api/folders/([^/]+?)/items(?:/)?$",
+      "routeKeys": {
+        "nxtPfolderId": "nxtPfolderId"
+      },
+      "namedRegex": "^/api/folders/(?<nxtPfolderId>[^/]+?)/items(?:/)?$"
+    },
+    {
+      "page": "/college/[id]",
+      "regex": "^/college/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/college/(?<nxtPid>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_global-error",
+      "regex": "^/_global\\-error(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_global\\-error(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/admin",
+      "regex": "^/admin(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin(?:/)?$"
+    },
+    {
+      "page": "/api/admin/allowed-emails",
+      "regex": "^/api/admin/allowed\\-emails(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/allowed\\-emails(?:/)?$"
+    },
+    {
+      "page": "/api/admin/colleges",
+      "regex": "^/api/admin/colleges(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/colleges(?:/)?$"
+    },
+    {
+      "page": "/api/admin/migrate",
+      "regex": "^/api/admin/migrate(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/migrate(?:/)?$"
+    },
+    {
+      "page": "/api/admin/schools",
+      "regex": "^/api/admin/schools(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/schools(?:/)?$"
+    },
+    {
+      "page": "/api/colleges",
+      "regex": "^/api/colleges(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/colleges(?:/)?$"
+    },
+    {
+      "page": "/api/colleges/autocomplete",
+      "regex": "^/api/colleges/autocomplete(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/colleges/autocomplete(?:/)?$"
+    },
+    {
+      "page": "/api/colleges/filters/acceptance-ranges",
+      "regex": "^/api/colleges/filters/acceptance\\-ranges(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/colleges/filters/acceptance\\-ranges(?:/)?$"
+    },
+    {
+      "page": "/api/colleges/filters/regions",
+      "regex": "^/api/colleges/filters/regions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/colleges/filters/regions(?:/)?$"
+    },
+    {
+      "page": "/api/colleges/filters/states",
+      "regex": "^/api/colleges/filters/states(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/colleges/filters/states(?:/)?$"
+    },
+    {
+      "page": "/api/colleges/filters/types",
+      "regex": "^/api/colleges/filters/types(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/colleges/filters/types(?:/)?$"
+    },
+    {
+      "page": "/api/favorites",
+      "regex": "^/api/favorites(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/favorites(?:/)?$"
+    },
+    {
+      "page": "/api/folders",
+      "regex": "^/api/folders(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/folders(?:/)?$"
+    },
+    {
+      "page": "/api/folders/all-items",
+      "regex": "^/api/folders/all\\-items(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/folders/all\\-items(?:/)?$"
+    },
+    {
+      "page": "/api/me",
+      "regex": "^/api/me(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/me(?:/)?$"
+    },
+    {
+      "page": "/api/schools",
+      "regex": "^/api/schools(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/schools(?:/)?$"
+    },
+    {
+      "page": "/api/schools/categories",
+      "regex": "^/api/schools/categories(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/schools/categories(?:/)?$"
+    },
+    {
+      "page": "/api/schools/programs",
+      "regex": "^/api/schools/programs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/schools/programs(?:/)?$"
+    },
+    {
+      "page": "/auth/callback",
+      "regex": "^/auth/callback(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/auth/callback(?:/)?$"
+    },
+    {
+      "page": "/auth/signout",
+      "regex": "^/auth/signout(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/auth/signout(?:/)?$"
+    },
+    {
+      "page": "/favicon.ico",
+      "regex": "^/favicon\\.ico(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/favicon\\.ico(?:/)?$"
+    },
+    {
+      "page": "/login",
+      "regex": "^/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/login(?:/)?$"
+    },
+    {
+      "page": "/schools",
+      "regex": "^/schools(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/schools(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments",
+    "clientParamParsing": false,
+    "dynamicRSCPrerender": false
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}
