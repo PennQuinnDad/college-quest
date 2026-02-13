@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { GraduationCap, AlertCircle, Loader2 } from "lucide-react";
-import { FaGoogle, FaGithub, FaApple } from "react-icons/fa";
+import { FaIcon } from "@/components/ui/fa-icon";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -27,27 +27,27 @@ const ERROR_MESSAGES: Record<string, string> = {
 const PROVIDERS: {
   id: OAuthProvider;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  faIcon: string;
   className: string;
 }[] = [
   {
     id: "google",
     label: "Continue with Google",
-    icon: FaGoogle,
+    faIcon: "google",
     className:
       "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-gray-400",
   },
   {
     id: "github",
     label: "Continue with GitHub",
-    icon: FaGithub,
+    faIcon: "github",
     className:
       "bg-[#24292f] text-white hover:bg-[#1b1f23] border border-[#24292f]",
   },
   {
     id: "apple",
     label: "Continue with Apple",
-    icon: FaApple,
+    faIcon: "apple",
     className:
       "bg-black text-white hover:bg-gray-900 border border-black",
   },
@@ -132,7 +132,7 @@ function LoginPageContent() {
             )}
 
             {/* OAuth buttons */}
-            {PROVIDERS.map(({ id, label, icon: Icon, className }) => {
+            {PROVIDERS.map(({ id, label, faIcon, className }) => {
               const isLoading = loadingProvider === id;
               const isDisabled = loadingProvider !== null;
               return (
@@ -151,7 +151,7 @@ function LoginPageContent() {
                   {isLoading ? (
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   ) : (
-                    <Icon className="mr-2 h-5 w-5" />
+                    <FaIcon icon={faIcon} style="brands" className="mr-2 text-lg" />
                   )}
                   {label}
                 </Button>
