@@ -622,9 +622,11 @@ function HomePageContent() {
         {/* ================================================================ */}
         {/* SEARCH BAR                                                       */}
         {/* ================================================================ */}
-        <div className="relative mb-6">
-          <div className="relative">
-            <FaIcon icon="magnifying-glass" style="duotone" className="pointer-events-none absolute left-3.5 top-1/2 text-lg -translate-y-1/2 text-muted-foreground" />
+        <div className="relative mb-6 max-w-full sm:max-w-xl">
+          <div className="relative flex items-stretch rounded-xl border border-border bg-white shadow-sm focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary">
+            <span className="pointer-events-none flex items-center pl-3.5">
+              <FaIcon icon="magnifying-glass" style="duotone" fixedWidth className="text-lg text-muted-foreground" />
+            </span>
             <input
               ref={searchInputRef}
               type="text"
@@ -639,33 +641,30 @@ function HomePageContent() {
               }}
               onKeyDown={handleSearchKeyDown}
               placeholder="Search colleges, programs, or locations..."
-              className="h-12 w-full rounded-xl border border-border bg-white pl-11 pr-24 text-base shadow-sm transition-shadow placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              className="h-12 flex-1 bg-transparent px-2 text-base placeholder:text-muted-foreground focus:outline-none"
             />
-            <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
-              {searchInput && (
-                <button
-                  onClick={() => {
-                    setSearchInput("");
-                    updateParams({ query: undefined });
-                    setAutocompleteOpen(false);
-                    searchInputRef.current?.focus();
-                  }}
-                  className="rounded-md p-1.5 text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  <FaIcon icon="xmark" className="text-sm" />
-                </button>
-              )}
-              <Button
-                size="sm"
+            {searchInput && (
+              <button
                 onClick={() => {
-                  updateParams({ query: searchInput || undefined });
+                  setSearchInput("");
+                  updateParams({ query: undefined });
                   setAutocompleteOpen(false);
+                  searchInputRef.current?.focus();
                 }}
-                className="bg-primary hover:bg-primary/90"
+                className="flex items-center px-2 text-muted-foreground transition-colors hover:text-foreground"
               >
-                Search
-              </Button>
-            </div>
+                <FaIcon icon="xmark" className="text-sm" />
+              </button>
+            )}
+            <Button
+              onClick={() => {
+                updateParams({ query: searchInput || undefined });
+                setAutocompleteOpen(false);
+              }}
+              className="h-12 rounded-l-none rounded-r-xl bg-primary hover:bg-primary/90"
+            >
+              Search
+            </Button>
           </div>
 
           {/* Autocomplete dropdown */}
@@ -858,12 +857,12 @@ function HomePageContent() {
         {/* VIEW CONTROLS                                                     */}
         {/* ================================================================ */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>
+          <div className="flex items-baseline gap-2">
+            <h1 className="text-2xl font-bold text-foreground">
               {collegesLoading
                 ? "Loading..."
                 : `${formatNumber(totalResults)} college${totalResults !== 1 ? "s" : ""} found`}
-            </span>
+            </h1>
             {showFavoritesOnly && (
               <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50">
                 Showing favorites
