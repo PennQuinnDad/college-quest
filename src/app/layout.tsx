@@ -18,7 +18,7 @@ export default function RootLayout({
       <head>
         <link
           rel="stylesheet"
-          href="https://ka-p.fontawesome.com/releases/v7.2.0/css/pro.min.css?token=1d0e709f89"
+          href="https://kit.fontawesome.com/1d0e709f89.css"
           crossOrigin="anonymous"
         />
       </head>
