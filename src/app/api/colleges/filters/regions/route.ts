@@ -4,32 +4,20 @@ import { createServiceClient } from "@/lib/supabase/server";
 export async function GET() {
   try {
     const supabase = createServiceClient();
-    const allRegions: string[] = [];
-    let page = 0;
-    const pageSize = 1000;
 
-    while (true) {
-      const { data, error } = await supabase
-        .from("colleges")
-        .select("region")
-        .not("region", "is", null)
-        .range(page * pageSize, (page + 1) * pageSize - 1);
+    const { data, error } = await supabase
+      .from("colleges")
+      .select("region")
+      .not("region", "is", null)
+      .limit(10000);
 
-      if (error) throw error;
-      if (!data || data.length === 0) break;
+    if (error) throw error;
 
-      for (const row of data) {
-        if (row.region && !allRegions.includes(row.region)) {
-          allRegions.push(row.region);
-        }
-      }
+    const regions = [...new Set(
+      (data || []).map((row) => row.region as string).filter(Boolean)
+    )].sort();
 
-      if (data.length < pageSize) break;
-      page++;
-    }
-
-    allRegions.sort();
-    return NextResponse.json(allRegions);
+    return NextResponse.json(regions);
   } catch (error) {
     console.error("Error fetching regions:", error);
     return NextResponse.json(

@@ -4,32 +4,20 @@ import { createServiceClient } from "@/lib/supabase/server";
 export async function GET() {
   try {
     const supabase = createServiceClient();
-    const allStates: string[] = [];
-    let page = 0;
-    const pageSize = 1000;
 
-    while (true) {
-      const { data, error } = await supabase
-        .from("colleges")
-        .select("state")
-        .not("state", "is", null)
-        .range(page * pageSize, (page + 1) * pageSize - 1);
+    const { data, error } = await supabase
+      .from("colleges")
+      .select("state")
+      .not("state", "is", null)
+      .limit(10000);
 
-      if (error) throw error;
-      if (!data || data.length === 0) break;
+    if (error) throw error;
 
-      for (const row of data) {
-        if (row.state && !allStates.includes(row.state)) {
-          allStates.push(row.state);
-        }
-      }
+    const states = [...new Set(
+      (data || []).map((row) => row.state as string).filter(Boolean)
+    )].sort();
 
-      if (data.length < pageSize) break;
-      page++;
-    }
-
-    allStates.sort();
-    return NextResponse.json(allStates);
+    return NextResponse.json(states);
   } catch (error) {
     console.error("Error fetching states:", error);
     return NextResponse.json(
