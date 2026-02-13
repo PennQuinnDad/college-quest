@@ -2,6 +2,7 @@
 
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { FaIcon } from "@/components/ui/fa-icon";
@@ -34,6 +35,15 @@ import { CollegeActions } from "@/components/college-actions";
 import { toast } from "@/components/ui/toaster";
 import { cn, formatCurrency, formatPercent, formatNumber } from "@/lib/utils";
 import type { College, School } from "@/lib/types";
+
+const CollegeMap = dynamic(() => import("@/components/college-map"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-[280px] items-center justify-center rounded-lg bg-gray-100">
+      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+    </div>
+  ),
+});
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -124,6 +134,8 @@ function mapCollege(raw: Record<string, unknown>): College {
     imageUrl: (raw.image_url ?? null) as string | null,
     jesuit: (raw.jesuit ?? false) as boolean,
     scorecardId: (raw.scorecard_id ?? null) as string | null,
+    latitude: (raw.latitude ?? null) as number | null,
+    longitude: (raw.longitude ?? null) as number | null,
     createdAt: raw.created_at as string,
     updatedAt: raw.updated_at as string,
   };
@@ -704,6 +716,25 @@ export default function CollegeDetailPage({
                 </dl>
               </CardContent>
             </Card>
+
+            {/* Location Map */}
+            {college.latitude != null && college.longitude != null && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <FaIcon icon="map-location-dot" style="duotone" className="text-sm text-primary" />
+                    Location
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CollegeMap
+                    latitude={college.latitude}
+                    longitude={college.longitude}
+                    name={college.name}
+                  />
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>

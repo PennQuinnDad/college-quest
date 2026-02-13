@@ -24,6 +24,8 @@ export interface College {
   imageUrl: string | null;
   jesuit: boolean;
   scorecardId: string | null;
+  latitude: number | null;
+  longitude: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -82,7 +84,7 @@ export interface CollegeSearchParams {
   programCategories?: string;
 }
 
-export type ViewMode = "table" | "grid" | "list";
+export type ViewMode = "table" | "grid" | "list" | "map";
 
 export interface SavedFilter {
   id: string;

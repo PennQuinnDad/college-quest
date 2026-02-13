@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
 
     const query = searchParams.get("query") || "";
     const page = Math.max(1, parseInt(searchParams.get("page") || "1") || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "12") || 12));
+    const limit = Math.min(5000, Math.max(1, parseInt(searchParams.get("limit") || "12") || 12));
     const sortBy = searchParams.get("sortBy") || "name";
     const sortOrder = searchParams.get("sortOrder") || "asc";
     const states = searchParams.get("states");
@@ -152,17 +152,77 @@ export async function GET(request: NextRequest) {
 
     dbQuery = dbQuery.order(sortColumn, { ascending: sortOrder === "asc" });
 
-    // Pagination
+    // Pagination — Supabase caps at 1000 rows per request, so for large
+    // limits (e.g. map view requesting all results) we paginate internally.
     const from = (page - 1) * limit;
     const to = from + limit - 1;
-    dbQuery = dbQuery.range(from, to);
 
-    const { data, count, error } = await dbQuery;
-    if (error) throw error;
+    if (limit <= 1000) {
+      dbQuery = dbQuery.range(from, to);
+      const { data, count, error } = await dbQuery;
+      if (error) throw error;
+      return NextResponse.json({
+        colleges: data || [],
+        total: count || 0,
+      });
+    }
+
+    // Large request: paginate in batches of 1000
+    const allData: unknown[] = [];
+    let totalCount = 0;
+    let offset = from;
+    const end = from + limit;
+
+    while (offset < end) {
+      const batchEnd = Math.min(offset + 999, end - 1);
+      // Re-build query with all filters for this batch
+      let bq = supabase.from("colleges").select("*", { count: offset === from ? "exact" : undefined });
+      // Re-apply filters
+      if (query) {
+        const q = `%${query}%`;
+        bq = bq.or(`name.ilike.${q},city.ilike.${q},state.ilike.${q},region.ilike.${q},type.ilike.${q},description.ilike.${q},website.ilike.${q}`);
+      }
+      if (states) bq = bq.in("state", states.split(",").map((s) => s.trim()));
+      if (regions) bq = bq.in("region", regions.split(",").map((r) => r.trim()));
+      if (types) bq = bq.in("type", types.split(",").map((t) => t.trim()));
+      if (sizes) bq = bq.in("size", sizes.split(",").map((s) => s.trim()));
+      if (jesuitOnly === "true") bq = bq.eq("jesuit", true);
+      if (programCollegeIds) bq = bq.in("id", programCollegeIds);
+      if (favoriteIds) bq = bq.in("id", favoriteIds.split(",").map((id) => id.trim()));
+      if (acceptanceRanges) {
+        const ranges = acceptanceRanges.split(",").map((r) => r.trim());
+        const ors: string[] = [];
+        for (const range of ranges) {
+          if (range.includes("0-15")) ors.push("and(acceptance_rate.gt.0,acceptance_rate.lte.15)");
+          else if (range.includes("15-30")) ors.push("and(acceptance_rate.gte.15,acceptance_rate.lte.30)");
+          else if (range.includes("30-50")) ors.push("and(acceptance_rate.gte.30,acceptance_rate.lte.50)");
+          else if (range.includes("50-75")) ors.push("and(acceptance_rate.gte.50,acceptance_rate.lte.75)");
+          else if (range.includes("75")) ors.push("acceptance_rate.gte.75");
+        }
+        if (ors.length > 0) bq = bq.or(ors.join(","));
+      } else {
+        if (acceptanceRateMin) bq = bq.gte("acceptance_rate", parseFloat(acceptanceRateMin));
+        if (acceptanceRateMax) bq = bq.lte("acceptance_rate", parseFloat(acceptanceRateMax));
+      }
+      if (tuitionMin) bq = bq.gte("tuition_in_state", parseInt(tuitionMin));
+      if (tuitionMax) bq = bq.lte("tuition_in_state", parseInt(tuitionMax));
+      if (enrollmentMin) bq = bq.gte("enrollment", parseInt(enrollmentMin));
+      if (enrollmentMax) bq = bq.lte("enrollment", parseInt(enrollmentMax));
+      bq = bq.order(sortColumn, { ascending: sortOrder === "asc" });
+      bq = bq.range(offset, batchEnd);
+
+      const { data, count, error } = await bq;
+      if (error) throw error;
+      if (offset === from && count != null) totalCount = count;
+      if (!data || data.length === 0) break;
+      allData.push(...data);
+      if (data.length < (batchEnd - offset + 1)) break;
+      offset = batchEnd + 1;
+    }
 
     return NextResponse.json({
-      colleges: data || [],
-      total: count || 0,
+      colleges: allData,
+      total: totalCount,
     });
   } catch (error) {
     console.error("Error fetching colleges:", error);

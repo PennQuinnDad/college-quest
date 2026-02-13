@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { FaIcon } from "@/components/ui/fa-icon";
@@ -25,6 +26,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { CollegeActions } from "@/components/college-actions";
+const CollegeMapView = dynamic(() => import("@/components/college-map-view"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-[600px] items-center justify-center rounded-xl border border-border bg-gray-50">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  ),
+});
 import { cn, formatCurrency, formatPercent, formatNumber } from "@/lib/utils";
 import type {
   College,
@@ -233,8 +242,13 @@ function HomePageContent() {
     if (showFavoritesOnly && favoriteIds.size > 0) {
       p.favoriteIds = Array.from(favoriteIds).join(",");
     }
+    // Map view needs all results (up to 5000), not a single page
+    if (viewMode === "map") {
+      p.limit = 5000;
+      p.page = 1;
+    }
     return p;
-  }, [params, showFavoritesOnly, favoriteIds]);
+  }, [params, showFavoritesOnly, favoriteIds, viewMode]);
 
   const { data: collegesData, isLoading: collegesLoading, error: collegesError } = useQuery<{
     colleges: College[];
@@ -911,6 +925,7 @@ function HomePageContent() {
                 { mode: "table" as ViewMode, faIcon: "table", label: "Table" },
                 { mode: "grid" as ViewMode, faIcon: "grid-2", label: "Grid" },
                 { mode: "list" as ViewMode, faIcon: "list", label: "List" },
+                { mode: "map" as ViewMode, faIcon: "map-location-dot", label: "Map" },
               ] as const).map(({ mode, faIcon, label }) => (
                 <button
                   key={mode}
@@ -1225,9 +1240,16 @@ function HomePageContent() {
             )}
 
             {/* ============================================================ */}
+            {/* MAP VIEW                                                       */}
+            {/* ============================================================ */}
+            {viewMode === "map" && (
+              <CollegeMapView colleges={colleges} isLoading={collegesLoading} />
+            )}
+
+            {/* ============================================================ */}
             {/* PAGINATION                                                     */}
             {/* ============================================================ */}
-            {totalPages > 1 && (
+            {viewMode !== "map" && totalPages > 1 && (
               <div className="mt-6 flex items-center justify-center gap-2">
                 <Button
                   variant="outline"
