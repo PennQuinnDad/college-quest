@@ -34,7 +34,7 @@ const PROVIDERS: {
     label: "Continue with GitHub",
     faIcon: "github",
     className:
-      "bg-[#24292f] text-white border border-[#24292f] hover:bg-[#1b1f23] hover:text-white hover:border-[#1b1f23]",
+      "bg-[#24292f] text-white border border-[#24292f] hover:opacity-60 hover:text-white",
   },
 ];
 
