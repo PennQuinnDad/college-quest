@@ -39,7 +39,7 @@ import type { College, School } from "@/lib/types";
 const CollegeMap = dynamic(() => import("@/components/college-map"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-[280px] items-center justify-center rounded-lg bg-gray-100">
+    <div className="flex w-full items-center justify-center bg-gray-100" style={{ aspectRatio: "21/5" }}>
       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
     </div>
   ),
@@ -575,6 +575,20 @@ export default function CollegeDetailPage({
         </div>
 
         {/* ================================================================ */}
+        {/* FULL-WIDTH MAP                                                     */}
+        {/* ================================================================ */}
+        {college.latitude != null && college.longitude != null && (
+          <div className="mb-8 overflow-hidden rounded-lg border border-border">
+            <CollegeMap
+              latitude={college.latitude}
+              longitude={college.longitude}
+              name={college.name}
+              aspectRatio="21/5"
+            />
+          </div>
+        )}
+
+        {/* ================================================================ */}
         {/* TWO-COLUMN LAYOUT                                                 */}
         {/* ================================================================ */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -717,24 +731,6 @@ export default function CollegeDetailPage({
               </CardContent>
             </Card>
 
-            {/* Location Map */}
-            {college.latitude != null && college.longitude != null && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <FaIcon icon="map-location-dot" style="duotone" className="text-sm text-primary" />
-                    Location
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CollegeMap
-                    latitude={college.latitude}
-                    longitude={college.longitude}
-                    name={college.name}
-                  />
-                </CardContent>
-              </Card>
-            )}
           </div>
         </div>
       </div>

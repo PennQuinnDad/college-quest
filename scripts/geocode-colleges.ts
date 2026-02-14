@@ -13,11 +13,19 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = "https://hawezgbaglrgjuczrqxu.supabase.co";
-const SUPABASE_SERVICE_KEY =
-  "SUPABASE_SERVICE_KEY_REDACTED";
-const SCORECARD_API_KEY = "SCORECARD_API_KEY_REDACTED";
+// Load env vars from .env.local when running standalone via tsx
+import "dotenv/config";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const SCORECARD_API_KEY = process.env.SCORECARD_API_KEY!;
 const SCORECARD_API = "https://api.data.gov/ed/collegescorecard/v1/schools.json";
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !SCORECARD_API_KEY) {
+  console.error("Missing required environment variables.");
+  console.error("Ensure .env.local contains: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SCORECARD_API_KEY");
+  process.exit(1);
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
@@ -46,6 +54,25 @@ async function fetchScorecardBatch(ids: string[]): Promise<ScorecardResult[]> {
 
 async function main() {
   console.log("Fetching all colleges from Supabase...");
+
+  // First verify the latitude column exists
+  const { data: testRow, error: testErr } = await supabase
+    .from("colleges")
+    .select("id, latitude")
+    .limit(1);
+
+  if (testErr) {
+    if (testErr.message.includes("latitude")) {
+      console.error("ERROR: latitude column does not exist yet.");
+      console.error("Please run this SQL in the Supabase SQL Editor:");
+      console.error("  ALTER TABLE colleges ADD COLUMN IF NOT EXISTS latitude float8, ADD COLUMN IF NOT EXISTS longitude float8;");
+      console.error("\nMake sure you're running it in the correct project (hawezgbaglrgjuczrqxu).");
+      process.exit(1);
+    }
+    console.error("Error testing connection:", testErr.message);
+    process.exit(1);
+  }
+  console.log("✓ latitude/longitude columns exist");
 
   // Paginate to get all colleges
   const allColleges: { id: string; scorecard_id: string | null; name: string; latitude: number | null }[] = [];
@@ -116,7 +143,7 @@ async function main() {
 
     // Update each college
     for (const college of batch) {
-      const coords = lookup.get(college.scorecard_id!);
+      const coords = lookup.get(String(college.scorecard_id!));
       if (coords) {
         const { error } = await supabase
           .from("colleges")
