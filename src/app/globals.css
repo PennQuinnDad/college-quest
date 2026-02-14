@@ -32,6 +32,9 @@
 }
 
 @layer base {
+  :root {
+    font-size: 125%; /* Scale all rem-based sizes up ~25% */
+  }
   * {
     @apply border-border;
   }
