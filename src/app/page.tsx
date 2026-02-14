@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -133,11 +133,20 @@ function HomePageContent() {
   const autocompleteRef = useRef<HTMLDivElement>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  // ---- Load saved filters from localStorage ----
+  // ---- Recently viewed colleges ----
+  const [recentlyViewed, setRecentlyViewed] = useState<{ id: string; name: string; city: string; state: string }[]>([]);
+
+  // ---- Load saved filters & recently viewed from localStorage ----
   useEffect(() => {
     try {
       const stored = localStorage.getItem("cq-saved-filters");
       if (stored) setSavedFilters(JSON.parse(stored));
+    } catch {
+      // ignore
+    }
+    try {
+      const viewed = localStorage.getItem("cq-recently-viewed");
+      if (viewed) setRecentlyViewed(JSON.parse(viewed));
     } catch {
       // ignore
     }
@@ -971,16 +980,35 @@ function HomePageContent() {
         {/* VIEW CONTROLS                                                     */}
         {/* ================================================================ */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-baseline gap-2">
-            <h1 className="text-2xl font-bold text-foreground">
-              {collegesLoading
-                ? "Loading..."
-                : `${formatNumber(totalResults)} college${totalResults !== 1 ? "s" : ""} found`}
-            </h1>
-            {showFavoritesOnly && (
-              <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50">
-                Showing favorites
-              </Badge>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-baseline gap-2">
+              <h1 className="text-2xl font-bold text-foreground">
+                {collegesLoading
+                  ? "Loading..."
+                  : `${formatNumber(totalResults)} college${totalResults !== 1 ? "s" : ""} found`}
+              </h1>
+              {showFavoritesOnly && (
+                <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50">
+                  Showing favorites
+                </Badge>
+              )}
+            </div>
+            {recentlyViewed.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                <FaIcon icon="clock-rotate-left" style="duotone" className="text-[10px]" />
+                <span>Recent:</span>
+                {recentlyViewed.map((c, i) => (
+                  <Fragment key={c.id}>
+                    {i > 0 && <span className="text-border">·</span>}
+                    <a
+                      href={`/college/${c.id}`}
+                      className="hover:text-foreground transition-colors"
+                    >
+                      {c.name}
+                    </a>
+                  </Fragment>
+                ))}
+              </div>
             )}
           </div>
 

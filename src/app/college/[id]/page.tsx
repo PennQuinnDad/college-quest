@@ -259,6 +259,19 @@ export default function CollegeDetailPage({
     return Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b));
   }, [schools]);
 
+  // ---- Track recently viewed ----
+  useEffect(() => {
+    if (!college) return;
+    try {
+      const key = "cq-recently-viewed";
+      const raw = localStorage.getItem(key);
+      const list: { id: string; name: string; city: string; state: string }[] = raw ? JSON.parse(raw) : [];
+      const filtered = list.filter((c) => c.id !== college.id);
+      filtered.unshift({ id: college.id, name: college.name, city: college.city, state: college.state });
+      localStorage.setItem(key, JSON.stringify(filtered.slice(0, 5)));
+    } catch { /* ignore */ }
+  }, [college]);
+
   // ---- Mutations ----
 
   const toggleFavorite = useMutation({
