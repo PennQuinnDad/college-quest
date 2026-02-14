@@ -26,6 +26,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { CollegeActions } from "@/components/college-actions";
+import { CollegeTable } from "@/components/college-table";
 const CollegeMapView = dynamic(() => import("@/components/college-map-view"), {
   ssr: false,
   loading: () => (
@@ -124,6 +125,8 @@ function HomePageContent() {
   const [saveFilterName, setSaveFilterName] = useState("");
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [exportCopied, setExportCopied] = useState(false);
+  const [copyDropdownOpen, setCopyDropdownOpen] = useState(false);
+  const copyDropdownRef = useRef<HTMLDivElement>(null);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<HTMLDivElement>(null);
@@ -138,6 +141,25 @@ function HomePageContent() {
       // ignore
     }
   }, []);
+
+  // ---- Copy dropdown: click-outside & Escape ----
+  useEffect(() => {
+    if (!copyDropdownOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (copyDropdownRef.current && !copyDropdownRef.current.contains(e.target as Node)) {
+        setCopyDropdownOpen(false);
+      }
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setCopyDropdownOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [copyDropdownOpen]);
 
   // ---- Push new params to URL ----
   const updateParams = useCallback(
@@ -461,39 +483,11 @@ function HomePageContent() {
     localStorage.setItem("cq-saved-filters", JSON.stringify(updated));
   }
 
-  // ---- Export favorites as Markdown ----
-  async function exportFavoritesMarkdown() {
-    const favColleges = colleges.filter((c) => favoriteIds.has(c.id));
-    if (favColleges.length === 0 && favoriteIds.size > 0) {
-      // Fetch all favorites if not all visible
-      const qs = new URLSearchParams();
-      qs.set("favoriteIds", Array.from(favoriteIds).join(","));
-      qs.set("limit", String(favoriteIds.size));
-      const res = await fetch(`/api/colleges?${qs.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        const allFavs: College[] = data.colleges || [];
-        copyMarkdown(allFavs);
-        return;
-      }
-    }
-    copyMarkdown(favColleges.length > 0 ? favColleges : []);
-  }
+  // ---- Copy favorites for AI platforms ----
+  type AIPlatform = "chatgpt" | "gemini" | "claude";
 
-  async function copyMarkdown(list: College[]) {
-    if (list.length === 0) {
-      try {
-        await navigator.clipboard.writeText(
-          "# My College Quest Favorites\n\nNo favorites saved yet."
-        );
-        setExportCopied(true);
-        setTimeout(() => setExportCopied(false), 2000);
-      } catch (err) {
-        console.error(err);
-      }
-      return;
-    }
-    const lines = ["# My College Quest Favorites\n"];
+  function buildCollegeMarkdown(list: College[]): string {
+    const lines: string[] = [];
     for (const c of list) {
       lines.push(`## ${c.name}`);
       lines.push(`- **Location:** ${c.city}, ${c.state}`);
@@ -504,17 +498,79 @@ function HomePageContent() {
         lines.push(`- **Tuition (In-State):** ${formatCurrency(c.tuitionInState)}`);
       if (c.tuitionOutOfState != null)
         lines.push(`- **Tuition (Out-of-State):** ${formatCurrency(c.tuitionOutOfState)}`);
+      if (c.netCost != null)
+        lines.push(`- **Average Net Cost:** ${formatCurrency(c.netCost)}`);
       if (c.acceptanceRate != null)
         lines.push(`- **Acceptance Rate:** ${formatPercent(c.acceptanceRate)}`);
+      if (c.satMath != null || c.satReading != null) {
+        const parts: string[] = [];
+        if (c.satMath != null) parts.push(`Math ${c.satMath}`);
+        if (c.satReading != null) parts.push(`Reading ${c.satReading}`);
+        lines.push(`- **SAT:** ${parts.join(", ")}`);
+      }
+      if (c.actComposite != null)
+        lines.push(`- **ACT Composite:** ${c.actComposite}`);
       if (c.graduationRate != null)
         lines.push(`- **Graduation Rate:** ${formatPercent(c.graduationRate)}`);
       if (c.jesuit) lines.push(`- **Jesuit:** Yes`);
+      if (c.programs && c.programs.length > 0)
+        lines.push(`- **Programs:** ${c.programs.join(", ")}`);
+      if (c.description) lines.push(`- **Description:** ${c.description}`);
       if (c.website) lines.push(`- **Website:** ${c.website}`);
       lines.push("");
     }
+    return lines.join("\n");
+  }
+
+  const AI_PROMPTS: Record<AIPlatform, { intro: string; closing: string }> = {
+    chatgpt: {
+      intro:
+        "Here is my college favorites list from College Quest. I'd like your help comparing these schools.\n",
+      closing:
+        "Please create a comparison table of these colleges highlighting key differences, then give me your top recommendations and explain why.",
+    },
+    gemini: {
+      intro:
+        "I've saved the following colleges to my favorites in College Quest and I'd like your analysis.\n",
+      closing:
+        "Please analyze these colleges, list the pros and cons of each, and help me narrow down my choices based on the data above.",
+    },
+    claude: {
+      intro:
+        "Below is my saved college list from College Quest. I'd love a thoughtful comparison.\n",
+      closing:
+        "Please compare these colleges thoughtfully, assess which might be the best fit for different student priorities (cost, selectivity, size, location), and share your overall recommendations.",
+    },
+  };
+
+  async function getFavoriteColleges(): Promise<College[]> {
+    const favColleges = colleges.filter((c) => favoriteIds.has(c.id));
+    if (favColleges.length === 0 && favoriteIds.size > 0) {
+      const qs = new URLSearchParams();
+      qs.set("favoriteIds", Array.from(favoriteIds).join(","));
+      qs.set("limit", String(favoriteIds.size));
+      const res = await fetch(`/api/colleges?${qs.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        return data.colleges || [];
+      }
+    }
+    return favColleges;
+  }
+
+  async function copyForAI(platform: AIPlatform) {
+    const list = await getFavoriteColleges();
+    const prompt = AI_PROMPTS[platform];
+    let text: string;
+    if (list.length === 0) {
+      text = "# My College Quest Favorites\n\nNo favorites saved yet.";
+    } else {
+      text = `# My College Quest Favorites\n\n${prompt.intro}\n${buildCollegeMarkdown(list)}\n---\n\n${prompt.closing}`;
+    }
     try {
-      await navigator.clipboard.writeText(lines.join("\n"));
+      await navigator.clipboard.writeText(text);
       setExportCopied(true);
+      setCopyDropdownOpen(false);
       setTimeout(() => setExportCopied(false), 2000);
     } catch (err) {
       console.error(err);
@@ -587,23 +643,54 @@ function HomePageContent() {
               </Button>
             )}
 
-            {/* Export Markdown */}
+            {/* Copy for AI dropdown */}
             {user && favoriteIds.size > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={exportFavoritesMarkdown}
-                className="gap-1.5"
-              >
-                {exportCopied ? (
-                  <FaIcon icon="check" className="text-sm text-green-600" />
-                ) : (
-                  <FaIcon icon="copy" style="regular" className="text-sm" />
+              <div ref={copyDropdownRef} className="relative">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCopyDropdownOpen((prev) => !prev)}
+                  className="gap-1.5"
+                >
+                  {exportCopied ? (
+                    <FaIcon icon="check" className="text-sm text-green-600" />
+                  ) : (
+                    <FaIcon icon="copy" style="regular" className="text-sm" />
+                  )}
+                  <span className="hidden sm:inline">
+                    {exportCopied ? "Copied!" : "Copy"}
+                  </span>
+                  <FaIcon icon="chevron-down" className="text-[10px] opacity-60" />
+                </Button>
+                {copyDropdownOpen && (
+                  <div className="absolute right-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-lg border border-border bg-white shadow-lg">
+                    <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Copy favorites for…
+                    </div>
+                    <button
+                      onClick={() => copyForAI("chatgpt")}
+                      className="flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-gray-50"
+                    >
+                      <FaIcon icon="openai" style="brands" className="text-base text-muted-foreground" />
+                      Copy for ChatGPT
+                    </button>
+                    <button
+                      onClick={() => copyForAI("gemini")}
+                      className="flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-gray-50"
+                    >
+                      <FaIcon icon="google" style="brands" className="text-base text-muted-foreground" />
+                      Copy for Google Gemini
+                    </button>
+                    <button
+                      onClick={() => copyForAI("claude")}
+                      className="flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-gray-50"
+                    >
+                      <FaIcon icon="message-bot" style="duotone" className="text-base text-muted-foreground" />
+                      Copy for Claude
+                    </button>
+                  </div>
                 )}
-                <span className="hidden sm:inline">
-                  {exportCopied ? "Copied!" : "Export"}
-                </span>
-              </Button>
+              </div>
             )}
 
             {/* Auth */}
@@ -886,38 +973,40 @@ function HomePageContent() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Sort */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground hidden sm:inline">Sort:</span>
-              <Select
-                value={params.sortBy || "name"}
-                onValueChange={(v) => updateParams({ sortBy: v })}
-              >
-                <SelectTrigger className="h-8 w-[140px] text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SORT_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() =>
-                  updateParams({
-                    sortOrder: params.sortOrder === "asc" ? "desc" : "asc",
-                  })
-                }
-                title={`Sort ${params.sortOrder === "asc" ? "descending" : "ascending"}`}
-              >
-                {sortIcon}
-              </Button>
-            </div>
+            {/* Sort (hidden in table view — headers handle sorting) */}
+            {viewMode !== "table" && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground hidden sm:inline">Sort:</span>
+                <Select
+                  value={params.sortBy || "name"}
+                  onValueChange={(v) => updateParams({ sortBy: v })}
+                >
+                  <SelectTrigger className="h-8 w-[140px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SORT_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() =>
+                    updateParams({
+                      sortOrder: params.sortOrder === "asc" ? "desc" : "asc",
+                    })
+                  }
+                  title={`Sort ${params.sortOrder === "asc" ? "descending" : "ascending"}`}
+                >
+                  {sortIcon}
+                </Button>
+              </div>
+            )}
 
             {/* View mode */}
             <div className="flex items-center rounded-lg border border-border bg-white p-0.5">
@@ -985,93 +1074,15 @@ function HomePageContent() {
           <>
             {/* TABLE VIEW */}
             {viewMode === "table" && (
-              <div className="overflow-x-auto rounded-xl border border-border bg-white">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-gray-50/80">
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                        Name
-                      </th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden sm:table-cell">
-                        Location
-                      </th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">
-                        Type
-                      </th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">
-                        Size
-                      </th>
-                      <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden sm:table-cell">
-                        Tuition
-                      </th>
-                      <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden md:table-cell">
-                        Acceptance
-                      </th>
-                      <th className="px-4 py-3 text-center font-medium text-muted-foreground w-10">
-                        <span className="sr-only">Actions</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {colleges.map((college) => (
-                      <tr
-                        key={college.id}
-                        className="transition-colors hover:bg-amber-50/40"
-                      >
-                        <td className="px-4 py-3">
-                          <a
-                            href={`/college/${college.id}`}
-                            className="font-medium text-primary hover:underline"
-                          >
-                            {college.name}
-                          </a>
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
-                          {college.city}, {college.state}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
-                          {college.type || "---"}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
-                          {college.size || "---"}
-                        </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-muted-foreground hidden sm:table-cell">
-                          {formatCurrency(college.tuitionInState)}
-                        </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-muted-foreground hidden md:table-cell">
-                          {formatPercent(college.acceptanceRate)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-center gap-1">
-                            <CollegeActions
-                              collegeId={college.id}
-                              isFavorite={favoriteIds.has(college.id)}
-                              onToggleFavorite={() => toggleFavoriteMutation.mutate(college.id)}
-                              user={user}
-                              variant="table"
-                            />
-                            {college.website && (
-                              <a
-                                href={
-                                  college.website.startsWith("http")
-                                    ? college.website
-                                    : `https://${college.website}`
-                                }
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground hover:bg-gray-100"
-                                title="Visit website"
-                              >
-                                <FaIcon icon="arrow-up-right-from-square" style="duotone" className="text-sm" />
-                              </a>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <CollegeTable
+                colleges={colleges}
+                sortBy={params.sortBy || "name"}
+                sortOrder={params.sortOrder || "asc"}
+                onSort={(sb, so) => updateParams({ sortBy: sb, sortOrder: so })}
+                favoriteIds={favoriteIds}
+                onToggleFavorite={(id) => toggleFavoriteMutation.mutate(id)}
+                user={user}
+              />
             )}
 
             {/* GRID VIEW */}

@@ -34,7 +34,7 @@ const PROVIDERS: {
     label: "Continue with GitHub",
     faIcon: "github",
     className:
-      "bg-[#24292f] text-white border border-[#24292f] hover:opacity-60 hover:text-white",
+      "bg-[#24292f] text-white border border-[#24292f] hover:bg-white hover:text-[#24292f]",
   },
 ];
 
@@ -158,14 +158,14 @@ function LoginPageContent() {
             <p className="text-center text-xs leading-relaxed text-muted-foreground">
               By continuing, you agree to our{" "}
               <a
-                href="#"
+                href="/terms"
                 className="font-medium text-primary underline-offset-4 hover:underline"
               >
                 Terms of Service
               </a>{" "}
               and{" "}
               <a
-                href="#"
+                href="/privacy"
                 className="font-medium text-primary underline-offset-4 hover:underline"
               >
                 Privacy Policy
