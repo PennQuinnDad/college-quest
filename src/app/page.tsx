@@ -26,6 +26,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { CollegeActions } from "@/components/college-actions";
+import { CollegeCard } from "@/components/college-card";
 import { CollegeTable } from "@/components/college-table";
 const CollegeMapView = dynamic(() => import("@/components/college-map-view"), {
   ssr: false,
@@ -1089,73 +1090,13 @@ function HomePageContent() {
             {viewMode === "grid" && (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {colleges.map((college) => (
-                  <Card
+                  <CollegeCard
                     key={college.id}
-                    className="group overflow-hidden transition-shadow hover:shadow-md"
-                  >
-                    {/* Image placeholder */}
-                    <div className="relative h-36 bg-gradient-to-br from-primary/10 to-amber-50 flex items-center justify-center">
-                      <FaIcon icon="graduation-cap" style="duotone" className="text-4xl text-primary/20" />
-                      {college.jesuit && (
-                        <Badge className="absolute top-2 left-2 bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100 text-[10px]">
-                          Jesuit
-                        </Badge>
-                      )}
-                      <CollegeActions
-                        collegeId={college.id}
-                        isFavorite={favoriteIds.has(college.id)}
-                        onToggleFavorite={() => toggleFavoriteMutation.mutate(college.id)}
-                        user={user}
-                        variant="grid"
-                      />
-                    </div>
-                    <CardContent className="p-4">
-                      <a
-                        href={`/college/${college.id}`}
-                        className="mb-1 block text-base font-semibold text-primary hover:underline line-clamp-1"
-                      >
-                        {college.name}
-                      </a>
-                      <p className="mb-3 flex items-center gap-1 text-sm text-muted-foreground">
-                        <FaIcon icon="location-dot" style="duotone" className="text-xs shrink-0" />
-                        {college.city}, {college.state}
-                      </p>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="rounded-md bg-gray-50 px-2 py-1.5">
-                          <span className="block text-muted-foreground">
-                            Tuition
-                          </span>
-                          <span className="font-semibold text-foreground tabular-nums">
-                            {formatCurrency(college.tuitionInState)}
-                          </span>
-                        </div>
-                        <div className="rounded-md bg-gray-50 px-2 py-1.5">
-                          <span className="block text-muted-foreground">
-                            Acceptance
-                          </span>
-                          <span className="font-semibold text-foreground tabular-nums">
-                            {formatPercent(college.acceptanceRate)}
-                          </span>
-                        </div>
-                        <div className="rounded-md bg-gray-50 px-2 py-1.5">
-                          <span className="block text-muted-foreground">
-                            Enrollment
-                          </span>
-                          <span className="font-semibold text-foreground tabular-nums">
-                            {formatNumber(college.enrollment)}
-                          </span>
-                        </div>
-                        <div className="rounded-md bg-gray-50 px-2 py-1.5">
-                          <span className="block text-muted-foreground">
-                            Type
-                          </span>
-                          <span className="font-semibold text-foreground">
-                            {college.type || "N/A"}
-                          </span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    college={college}
+                    isFavorite={favoriteIds.has(college.id)}
+                    onToggleFavorite={() => toggleFavoriteMutation.mutate(college.id)}
+                    user={user}
+                  />
                 ))}
               </div>
             )}
@@ -1254,7 +1195,13 @@ function HomePageContent() {
             {/* MAP VIEW                                                       */}
             {/* ============================================================ */}
             {viewMode === "map" && (
-              <CollegeMapView colleges={colleges} isLoading={collegesLoading} />
+              <CollegeMapView
+                colleges={colleges}
+                isLoading={collegesLoading}
+                favoriteIds={favoriteIds}
+                onToggleFavorite={(id) => toggleFavoriteMutation.mutate(id)}
+                user={user}
+              />
             )}
 
             {/* ============================================================ */}
