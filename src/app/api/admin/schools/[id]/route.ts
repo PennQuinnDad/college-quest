@@ -6,7 +6,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authError = verifyAdmin(request);
+  const authError = await verifyAdmin();
   if (authError) return authError;
 
   try {
@@ -43,7 +43,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authError = verifyAdmin(request);
+  const authError = await verifyAdmin();
   if (authError) return authError;
 
   try {
@@ -95,7 +95,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authError = verifyAdmin(request);
+  const authError = await verifyAdmin();
   if (authError) return authError;
 
   try {

@@ -4,7 +4,7 @@ import { verifyAdmin } from "@/lib/admin-auth";
 import { v4 as uuidv4 } from "uuid";
 
 export async function GET(request: NextRequest) {
-  const authError = verifyAdmin(request);
+  const authError = await verifyAdmin();
   if (authError) return authError;
 
   try {
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authError = verifyAdmin(request);
+  const authError = await verifyAdmin();
   if (authError) return authError;
 
   try {

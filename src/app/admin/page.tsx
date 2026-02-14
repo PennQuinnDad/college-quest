@@ -34,6 +34,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
+import type { UserProfile } from "@/lib/types";
 
 // ────────────────────────────────────────────────────────────
 // Types
@@ -147,119 +148,62 @@ const COLLEGE_SIZES = ["Small", "Medium", "Large"];
 // ────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
-  const [token, setToken] = useState<string | null>(null);
-  const [passwordInput, setPasswordInput] = useState("");
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
+  const { data: user, isLoading: userLoading } = useQuery<UserProfile | null>({
+    queryKey: ["me"],
+    queryFn: async () => {
+      const res = await fetch("/api/me");
+      if (!res.ok) return null;
+      return res.json();
+    },
+    retry: false,
+  });
 
-  // Check localStorage for a previously saved token on mount
-  useEffect(() => {
-    const saved = localStorage.getItem("admin_token");
-    if (saved) {
-      setToken(saved);
-    }
-  }, []);
+  const isAdmin = user?.role === "admin";
 
-  async function handleLogin() {
-    if (!passwordInput.trim()) return;
-    setAuthLoading(true);
-    setAuthError(null);
-
-    try {
-      const res = await fetch("/api/admin/auth", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${passwordInput.trim()}`,
-        },
-      });
-
-      if (!res.ok) {
-        setAuthError("Invalid password. Access denied.");
-        setAuthLoading(false);
-        return;
-      }
-
-      const t = passwordInput.trim();
-      setToken(t);
-      localStorage.setItem("admin_token", t);
-    } catch {
-      setAuthError("Connection error. Please try again.");
-    } finally {
-      setAuthLoading(false);
-    }
+  // ── Loading ──
+  if (userLoading) {
+    return (
+      <div className="min-h-screen" style={{ backgroundColor: "#fbfbf8" }}>
+        <div className="flex min-h-screen items-center justify-center px-4">
+          <div className="flex items-center gap-3 text-muted-foreground">
+            <FaIcon icon="spinner" style="solid" className="text-xl fa-spin" />
+            <span className="text-lg">Loading...</span>
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  function handleLogout() {
-    setToken(null);
-    setPasswordInput("");
-    localStorage.removeItem("admin_token");
-  }
-
-  // ── Auth Screen ──
-  if (!token) {
+  // ── Access Denied ──
+  if (!isAdmin) {
     return (
       <div className="min-h-screen" style={{ backgroundColor: "#fbfbf8" }}>
         <div className="flex min-h-screen items-center justify-center px-4">
           <Card className="w-full max-w-md shadow-lg">
             <CardHeader className="items-center space-y-4 pb-2 pt-8">
               <div
-                className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-md"
+                className="flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10 shadow-md"
               >
-                <FaIcon icon="shield-halved" style="solid" className="text-2xl text-white" />
+                <FaIcon icon="shield-xmark" style="solid" className="text-2xl text-destructive" />
               </div>
               <div className="space-y-1 text-center">
                 <CardTitle className="text-2xl font-bold tracking-tight">
-                  Admin Dashboard
+                  Access Denied
                 </CardTitle>
                 <CardDescription>
-                  Enter the admin password to continue
+                  {user
+                    ? "Your account does not have admin privileges."
+                    : "You must be logged in with an admin account."}
                 </CardDescription>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4 px-6 pb-8 pt-4">
-              {authError && (
-                <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-                  <FaIcon icon="circle-exclamation" style="solid" className="mt-0.5 text-sm shrink-0" />
-                  <span>{authError}</span>
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="admin-password">Password</Label>
-                <div className="relative">
-                  <FaIcon icon="lock" style="solid" className="absolute left-3 top-1/2 text-sm -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="admin-password"
-                    type="password"
-                    placeholder="Enter admin password"
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-                    className="pl-10"
-                    autoFocus
-                  />
-                </div>
-              </div>
-              <Button
-                className="w-full bg-primary"
-                onClick={handleLogin}
-                disabled={authLoading || !passwordInput.trim()}
+            <CardContent className="px-6 pb-8 pt-4 text-center">
+              <Link
+                href="/"
+                className="text-sm text-primary hover:underline"
               >
-                {authLoading ? (
-                  <FaIcon icon="spinner" style="solid" className="mr-2 text-sm fa-spin" />
-                ) : (
-                  <FaIcon icon="shield-halved" style="solid" className="mr-2 text-sm" />
-                )}
-                Authenticate
-              </Button>
-              <div className="pt-2 text-center">
-                <Link
-                  href="/"
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
-                  Back to Home
-                </Link>
-              </div>
+                Back to Home
+              </Link>
             </CardContent>
           </Card>
         </div>
@@ -296,14 +240,6 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLogout}
-            className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"
-          >
-            Logout
-          </Button>
         </div>
       </header>
 
@@ -326,13 +262,13 @@ export default function AdminPage() {
           </TabsList>
 
           <TabsContent value="colleges">
-            <CollegesTab token={token} />
+            <CollegesTab />
           </TabsContent>
           <TabsContent value="schools">
-            <SchoolsTab token={token} />
+            <SchoolsTab />
           </TabsContent>
           <TabsContent value="users">
-            <UsersTab token={token} />
+            <UsersTab />
           </TabsContent>
         </Tabs>
       </main>
@@ -344,7 +280,7 @@ export default function AdminPage() {
 // Colleges Tab
 // ────────────────────────────────────────────────────────────
 
-function CollegesTab({ token }: { token: string }) {
+function CollegesTab() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -363,10 +299,7 @@ function CollegesTab({ token }: { token: string }) {
     return () => clearTimeout(t);
   }, [search]);
 
-  const headers = useCallback(
-    () => ({ Authorization: `Bearer ${token}`, "Content-Type": "application/json" }),
-    [token]
-  );
+  const jsonHeaders = { "Content-Type": "application/json" };
 
   const { data, isLoading } = useQuery<{ colleges: College[]; total: number }>({
     queryKey: ["admin-colleges", debouncedSearch, page],
@@ -376,7 +309,7 @@ function CollegesTab({ token }: { token: string }) {
         limit: "20",
         query: debouncedSearch,
       });
-      const res = await fetch(`/api/admin/colleges?${params}`, { headers: headers() });
+      const res = await fetch(`/api/admin/colleges?${params}`);
       if (!res.ok) throw new Error("Failed to fetch colleges");
       return res.json();
     },
@@ -408,7 +341,7 @@ function CollegesTab({ token }: { token: string }) {
         : "/api/admin/colleges";
       const res = await fetch(url, {
         method: "POST",
-        headers: headers(),
+        headers: jsonHeaders,
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("Failed to save college");
@@ -430,7 +363,6 @@ function CollegesTab({ token }: { token: string }) {
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/admin/colleges/${id}`, {
         method: "DELETE",
-        headers: headers(),
       });
       if (!res.ok) throw new Error("Failed to delete college");
       return res.json();
@@ -798,7 +730,7 @@ function CollegesTab({ token }: { token: string }) {
 // Schools Tab
 // ────────────────────────────────────────────────────────────
 
-function SchoolsTab({ token }: { token: string }) {
+function SchoolsTab() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -807,15 +739,12 @@ function SchoolsTab({ token }: { token: string }) {
   const [form, setForm] = useState<SchoolFormData>(EMPTY_SCHOOL_FORM);
   const [collegeSearch, setCollegeSearch] = useState("");
 
-  const headers = useCallback(
-    () => ({ Authorization: `Bearer ${token}`, "Content-Type": "application/json" }),
-    [token]
-  );
+  const jsonHeaders = { "Content-Type": "application/json" };
 
   const { data: schools = [], isLoading } = useQuery<School[]>({
     queryKey: ["admin-schools"],
     queryFn: async () => {
-      const res = await fetch("/api/admin/schools", { headers: headers() });
+      const res = await fetch("/api/admin/schools");
       if (!res.ok) throw new Error("Failed to fetch schools");
       return res.json();
     },
@@ -835,7 +764,7 @@ function SchoolsTab({ token }: { token: string }) {
     queryFn: async () => {
       if (!collegeSearch.trim()) return [];
       const params = new URLSearchParams({ query: collegeSearch, limit: "10" });
-      const res = await fetch(`/api/admin/colleges?${params}`, { headers: headers() });
+      const res = await fetch(`/api/admin/colleges?${params}`);
       if (!res.ok) return [];
       const data = await res.json();
       return data.colleges || [];
@@ -869,7 +798,7 @@ function SchoolsTab({ token }: { token: string }) {
         : "/api/admin/schools";
       const res = await fetch(url, {
         method: "POST",
-        headers: headers(),
+        headers: jsonHeaders,
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("Failed to save school");
@@ -891,7 +820,6 @@ function SchoolsTab({ token }: { token: string }) {
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/admin/schools/${id}`, {
         method: "DELETE",
-        headers: headers(),
       });
       if (!res.ok) throw new Error("Failed to delete school");
       return res.json();
@@ -1223,20 +1151,15 @@ function SchoolsTab({ token }: { token: string }) {
 // Users Tab
 // ────────────────────────────────────────────────────────────
 
-function UsersTab({ token }: { token: string }) {
+function UsersTab() {
   const queryClient = useQueryClient();
   const [newEmail, setNewEmail] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<AllowedEmail | null>(null);
 
-  const headers = useCallback(
-    () => ({ Authorization: `Bearer ${token}`, "Content-Type": "application/json" }),
-    [token]
-  );
-
   const { data: emails = [], isLoading } = useQuery<AllowedEmail[]>({
     queryKey: ["admin-allowed-emails"],
     queryFn: async () => {
-      const res = await fetch("/api/admin/allowed-emails", { headers: headers() });
+      const res = await fetch("/api/admin/allowed-emails");
       if (!res.ok) throw new Error("Failed to fetch allowed emails");
       return res.json();
     },
@@ -1246,7 +1169,7 @@ function UsersTab({ token }: { token: string }) {
     mutationFn: async (email: string) => {
       const res = await fetch("/api/admin/allowed-emails", {
         method: "POST",
-        headers: headers(),
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
       if (!res.ok) {
@@ -1269,7 +1192,6 @@ function UsersTab({ token }: { token: string }) {
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/admin/allowed-emails?id=${id}`, {
         method: "DELETE",
-        headers: headers(),
       });
       if (!res.ok) throw new Error("Failed to remove email");
       return res.json();
