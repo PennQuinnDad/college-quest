@@ -53,7 +53,7 @@ function buildQueryString(params: CollegeSearchParams): string {
   const sp = new URLSearchParams();
   if (params.query) sp.set("query", params.query);
   if (params.page && params.page > 1) sp.set("page", String(params.page));
-  if (params.limit && params.limit !== 12) sp.set("limit", String(params.limit));
+  if (params.limit && params.limit !== 24) sp.set("limit", String(params.limit));
   if (params.sortBy && params.sortBy !== "name") sp.set("sortBy", params.sortBy);
   if (params.sortOrder && params.sortOrder !== "asc")
     sp.set("sortOrder", params.sortOrder);
@@ -72,7 +72,7 @@ function parseSearchParams(sp: URLSearchParams): CollegeSearchParams {
   return {
     query: sp.get("query") || undefined,
     page: sp.get("page") ? parseInt(sp.get("page")!) : 1,
-    limit: sp.get("limit") ? parseInt(sp.get("limit")!) : 12,
+    limit: sp.get("limit") ? parseInt(sp.get("limit")!) : 24,
     sortBy: sp.get("sortBy") || "name",
     sortOrder: (sp.get("sortOrder") as "asc" | "desc") || "asc",
     states: sp.get("states") || undefined,
@@ -298,7 +298,7 @@ function HomePageContent() {
   const colleges = collegesData?.colleges || [];
   const totalResults = collegesData?.total || 0;
   const currentPage = params.page || 1;
-  const pageSize = params.limit || 12;
+  const pageSize = params.limit || 24;
   const totalPages = Math.max(1, Math.ceil(totalResults / pageSize));
 
   // ---- Autocomplete ----

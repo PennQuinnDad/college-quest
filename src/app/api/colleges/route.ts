@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
 
     const query = searchParams.get("query") || "";
     const page = Math.max(1, parseInt(searchParams.get("page") || "1") || 1);
-    const limit = Math.min(5000, Math.max(1, parseInt(searchParams.get("limit") || "12") || 12));
+    const limit = Math.min(5000, Math.max(1, parseInt(searchParams.get("limit") || "24") || 24));
     const sortBy = searchParams.get("sortBy") || "name";
     const sortOrder = searchParams.get("sortOrder") || "asc";
     const states = searchParams.get("states");
