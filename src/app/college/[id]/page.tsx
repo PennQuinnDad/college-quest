@@ -180,6 +180,7 @@ export default function CollegeDetailPage({
   // ---- Edit modal state ----
   const [editOpen, setEditOpen] = useState(false);
   const [form, setForm] = useState<CollegeFormData>(EMPTY_FORM);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   // ---- Data fetching ----
 
@@ -325,6 +326,21 @@ export default function CollegeDetailPage({
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/colleges/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete college");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "College deleted" });
+      router.push("/");
+    },
+    onError: () => {
+      toast({ title: "Error deleting college", variant: "destructive" });
+    },
+  });
+
   const handleToggleFavorite = useCallback(() => {
     toggleFavorite.mutate();
   }, [toggleFavorite]);
@@ -345,6 +361,7 @@ export default function CollegeDetailPage({
       enrollment: college.enrollment != null ? String(college.enrollment) : "",
       description: college.description || "",
     });
+    setDeleteConfirm(false);
     setEditOpen(true);
   }
 
@@ -882,20 +899,60 @@ export default function CollegeDetailPage({
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              className="bg-primary"
-              onClick={handleSave}
-              disabled={saveMutation.isPending}
-            >
-              {saveMutation.isPending && (
-                <FaIcon icon="spinner" style="solid" className="mr-2 text-sm fa-spin" />
-              )}
-              Update
-            </Button>
+          <DialogFooter className="flex-col gap-3 sm:flex-row sm:justify-between">
+            {user?.role === "admin" && (
+              <div className="flex items-center gap-2">
+                {!deleteConfirm ? (
+                  <Button
+                    variant="outline"
+                    className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+                    onClick={() => setDeleteConfirm(true)}
+                  >
+                    <FaIcon icon="trash" style="duotone" className="mr-1.5 text-sm" />
+                    Delete
+                  </Button>
+                ) : (
+                  <>
+                    <span className="text-sm text-red-600">Are you sure?</span>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => deleteMutation.mutate()}
+                      disabled={deleteMutation.isPending}
+                    >
+                      {deleteMutation.isPending ? (
+                        <FaIcon icon="spinner" style="solid" className="mr-1.5 text-sm fa-spin" />
+                      ) : (
+                        <FaIcon icon="trash" style="solid" className="mr-1.5 text-sm" />
+                      )}
+                      Confirm Delete
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeleteConfirm(false)}
+                    >
+                      No
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
+            <div className="flex items-center gap-2 sm:ml-auto">
+              <Button variant="outline" onClick={() => setEditOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                className="bg-primary"
+                onClick={handleSave}
+                disabled={saveMutation.isPending}
+              >
+                {saveMutation.isPending && (
+                  <FaIcon icon="spinner" style="solid" className="mr-2 text-sm fa-spin" />
+                )}
+                Update
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

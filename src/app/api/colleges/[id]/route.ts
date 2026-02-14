@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { verifyAdmin } from "@/lib/admin-auth";
 
 export async function GET(
   _request: NextRequest,
@@ -85,6 +86,31 @@ export async function POST(
     console.error("Error updating college:", error);
     return NextResponse.json(
       { error: "Failed to update college" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const authError = await verifyAdmin();
+  if (authError) return authError;
+
+  try {
+    const { id } = await params;
+    const supabase = createServiceClient();
+
+    const { error } = await supabase.from("colleges").delete().eq("id", id);
+
+    if (error) throw error;
+
+    return NextResponse.json({ message: "College deleted" });
+  } catch (error) {
+    console.error("Error deleting college:", error);
+    return NextResponse.json(
+      { error: "Failed to delete college" },
       { status: 500 }
     );
   }
