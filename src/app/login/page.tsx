@@ -30,25 +30,11 @@ const PROVIDERS: {
   className: string;
 }[] = [
   {
-    id: "google",
-    label: "Continue with Google",
-    faIcon: "google",
-    className:
-      "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-gray-400",
-  },
-  {
     id: "github",
     label: "Continue with GitHub",
     faIcon: "github",
     className:
-      "bg-[#24292f] text-white hover:bg-[#1b1f23] border border-[#24292f]",
-  },
-  {
-    id: "apple",
-    label: "Continue with Apple",
-    faIcon: "apple",
-    className:
-      "bg-black text-white hover:bg-gray-900 border border-black",
+      "bg-[#24292f] text-white border border-[#24292f] hover:bg-[#1b1f23] hover:text-white hover:border-[#1b1f23]",
   },
 ];
 
