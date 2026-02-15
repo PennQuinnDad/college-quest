@@ -102,7 +102,7 @@ export default function CollegeMap({ latitude, longitude, name, aspectRatio }: C
         className={aspectRatio ? "w-full" : "h-[280px] w-full rounded-lg"}
         style={{ zIndex: 0, ...(aspectRatio ? { aspectRatio } : {}) }}
       >
-        <LayersControl position="topright">
+        <LayersControl position="topleft">
           <LayersControl.BaseLayer checked name="Street">
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
@@ -142,7 +142,7 @@ export default function CollegeMap({ latitude, longitude, name, aspectRatio }: C
             className="h-full w-full"
             style={{ zIndex: 0 }}
           >
-            <LayersControl position="topright">
+            <LayersControl position="topleft">
               <LayersControl.BaseLayer checked name="Street">
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
