@@ -636,6 +636,15 @@ export default function CollegeDetailPage({
                 <FaIcon icon="map-location-dot" style="duotone" className="text-[10px]" />
                 Google Maps
               </a>
+              <a
+                href={`https://earth.google.com/web/@${college.latitude},${college.longitude},500a,1000d,35y,0h,0t,0r`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+              >
+                <FaIcon icon="globe" style="duotone" className="text-[10px]" />
+                Google Earth
+              </a>
             </div>
           </div>
         )}
