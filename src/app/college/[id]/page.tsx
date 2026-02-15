@@ -637,7 +637,7 @@ export default function CollegeDetailPage({
                 Google Maps
               </a>
               <a
-                href={`https://earth.google.com/web/@${college.latitude},${college.longitude},500a,1000d,35y,0h,60t,0r/data=KAI`}
+                href={`https://earth.google.com/web/@${college.latitude},${college.longitude},500a,1000d,35y,0h,60t,0r`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
