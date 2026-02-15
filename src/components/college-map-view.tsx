@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   MapContainer,
   TileLayer,
+  LayersControl,
   Marker,
   Popup,
+  Tooltip,
   useMap,
   useMapEvents,
 } from "react-leaflet";
@@ -165,10 +167,26 @@ export default function CollegeMapView({
           className="h-[600px] w-full"
           style={{ zIndex: 0 }}
         >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-          />
+          <LayersControl position="topright">
+            <LayersControl.BaseLayer checked name="Street">
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+              />
+            </LayersControl.BaseLayer>
+            <LayersControl.BaseLayer name="Satellite">
+              <TileLayer
+                attribution="Tiles &copy; Esri"
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              />
+            </LayersControl.BaseLayer>
+            <LayersControl.BaseLayer name="Terrain">
+              <TileLayer
+                attribution='&copy; <a href="https://opentopomap.org">OpenTopoMap</a> contributors'
+                url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+              />
+            </LayersControl.BaseLayer>
+          </LayersControl>
           <FitBounds colleges={mappableColleges} />
           <MapViewportTracker onViewportChange={handleViewportChange} />
           <MarkerClusterGroup chunkedLoading iconCreateFunction={createClusterIcon}>
@@ -178,6 +196,9 @@ export default function CollegeMapView({
                 position={[college.latitude!, college.longitude!]}
                 icon={defaultIcon}
               >
+                <Tooltip direction="top" offset={[0, -35]} opacity={0.95}>
+                  <span className="text-xs font-medium">{college.name}</span>
+                </Tooltip>
                 <Popup>
                   <div className="min-w-[180px]">
                     <a
