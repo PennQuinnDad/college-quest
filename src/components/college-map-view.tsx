@@ -27,6 +27,32 @@ const defaultIcon = L.icon({
   shadowSize: [41, 41],
 });
 
+// Custom cluster icon — white circle with indigo border for readability
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function createClusterIcon(cluster: any) {
+  const count = cluster.getChildCount();
+  const size = count < 10 ? 32 : count < 100 ? 36 : 40;
+
+  return L.divIcon({
+    html: `<div style="
+      width: ${size}px;
+      height: ${size}px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: white;
+      border: 2px solid #6366f1;
+      border-radius: 50%;
+      font-size: ${count >= 100 ? 12 : 13}px;
+      font-weight: 600;
+      color: #4338ca;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    ">${count}</div>`,
+    className: "",
+    iconSize: L.point(size, size),
+  });
+}
+
 const ZOOM_THRESHOLD = 10;
 const MAX_VIEWPORT_CARDS = 50;
 
@@ -145,7 +171,7 @@ export default function CollegeMapView({
           />
           <FitBounds colleges={mappableColleges} />
           <MapViewportTracker onViewportChange={handleViewportChange} />
-          <MarkerClusterGroup chunkedLoading>
+          <MarkerClusterGroup chunkedLoading iconCreateFunction={createClusterIcon}>
             {mappableColleges.map((college) => (
               <Marker
                 key={college.id}
