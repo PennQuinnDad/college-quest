@@ -608,13 +608,35 @@ export default function CollegeDetailPage({
         {/* FULL-WIDTH MAP                                                     */}
         {/* ================================================================ */}
         {college.latitude != null && college.longitude != null && (
-          <div className="mb-8 overflow-hidden rounded-lg border border-border">
-            <CollegeMap
-              latitude={college.latitude}
-              longitude={college.longitude}
-              name={college.name}
-              aspectRatio="21/5"
-            />
+          <div className="mb-8">
+            <div className="overflow-hidden rounded-lg border border-border">
+              <CollegeMap
+                latitude={college.latitude}
+                longitude={college.longitude}
+                name={college.name}
+                aspectRatio="21/5"
+              />
+            </div>
+            <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
+              <a
+                href={`https://maps.apple.com/?q=${encodeURIComponent(college.name)}&ll=${college.latitude},${college.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+              >
+                <FaIcon icon="map-location-dot" style="duotone" className="text-[10px]" />
+                Apple Maps
+              </a>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${college.latitude},${college.longitude}&query_place_id=${encodeURIComponent(college.name)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+              >
+                <FaIcon icon="map-location-dot" style="duotone" className="text-[10px]" />
+                Google Maps
+              </a>
+            </div>
           </div>
         )}
 
