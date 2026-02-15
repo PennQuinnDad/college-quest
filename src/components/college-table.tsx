@@ -259,8 +259,7 @@ export function CollegeTable({
         ref={wrapperRef}
         onScroll={handleScroll}
         className={cn(
-          "overflow-x-auto overflow-y-auto rounded-xl border border-border bg-white",
-          "max-h-[calc(100vh-280px)]",
+          "overflow-x-auto rounded-xl border border-border bg-white",
           isResizing && "select-none"
         )}
       >

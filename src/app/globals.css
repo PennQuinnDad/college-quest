@@ -33,7 +33,13 @@
 
 @layer base {
   :root {
-    font-size: 125%; /* Scale all rem-based sizes up ~25% */
+    font-size: 100%; /* Mobile: standard 16px base */
+  }
+  @media (min-width: 640px) {
+    :root { font-size: 112.5%; } /* sm: 18px base */
+  }
+  @media (min-width: 1024px) {
+    :root { font-size: 125%; } /* lg: 20px base (original) */
   }
   * {
     @apply border-border;
