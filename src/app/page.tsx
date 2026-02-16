@@ -665,10 +665,10 @@ function HomePageContent() {
                   {exportCopied ? (
                     <FaIcon icon="check" className="text-sm text-green-600" />
                   ) : (
-                    <FaIcon icon="copy" style="regular" className="text-sm" />
+                    <FaIcon icon="sparkles" style="duotone" className="text-sm" />
                   )}
                   <span className="hidden sm:inline">
-                    {exportCopied ? "Copied!" : "Copy"}
+                    {exportCopied ? "Copied!" : "Copy for AI"}
                   </span>
                   <FaIcon icon="chevron-down" className="text-[10px] opacity-60" />
                 </Button>
