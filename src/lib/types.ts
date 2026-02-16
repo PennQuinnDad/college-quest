@@ -84,6 +84,23 @@ export interface CollegeSearchParams {
   programCategories?: string;
 }
 
+export interface CollegeResource {
+  id: string;
+  collegeId: string;
+  type: "link" | "file";
+  title: string;
+  description: string | null;
+  category: string | null;
+  url: string | null;
+  storagePath: string | null;
+  fileName: string | null;
+  fileSize: number | null;
+  mimeType: string | null;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type ViewMode = "table" | "grid" | "list" | "map";
 
 export interface SavedFilter {

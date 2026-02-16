@@ -32,6 +32,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CollegeActions } from "@/components/college-actions";
+import { CollegeResources } from "@/components/college-resources";
 import { toast } from "@/components/ui/toaster";
 import { cn, formatCurrency, formatPercent, formatNumber } from "@/lib/utils";
 import type { College, School } from "@/lib/types";
@@ -791,6 +792,9 @@ export default function CollegeDetailPage({
                 </dl>
               </CardContent>
             </Card>
+
+            {/* Resources */}
+            <CollegeResources collegeId={id} isAdmin={user?.role === "admin"} />
 
           </div>
         </div>
