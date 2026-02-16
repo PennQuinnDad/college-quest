@@ -64,6 +64,7 @@ interface CollegeMapViewProps {
   favoriteIds: Set<string>;
   onToggleFavorite: (collegeId: string) => void;
   user: UserProfile | null | undefined;
+  isFiltered?: boolean;
 }
 
 function FitBounds({ colleges }: { colleges: College[] }) {
@@ -105,6 +106,7 @@ export default function CollegeMapView({
   favoriteIds,
   onToggleFavorite,
   user,
+  isFiltered = false,
 }: CollegeMapViewProps) {
   const mappableColleges = useMemo(
     () => colleges.filter((c) => c.latitude != null && c.longitude != null),
@@ -187,7 +189,7 @@ export default function CollegeMapView({
               />
             </LayersControl.BaseLayer>
           </LayersControl>
-          <FitBounds colleges={mappableColleges} />
+          {isFiltered && <FitBounds colleges={mappableColleges} />}
           <MapViewportTracker onViewportChange={handleViewportChange} />
           <MarkerClusterGroup chunkedLoading iconCreateFunction={createClusterIcon}>
             {mappableColleges.map((college) => (

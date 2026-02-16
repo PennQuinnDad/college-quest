@@ -117,7 +117,7 @@ function HomePageContent() {
   const params = useMemo(() => parseSearchParams(searchParams), [searchParams]);
 
   // ---- Local UI state ----
-  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [viewMode, setViewMode] = useState<ViewMode>("map");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [searchInput, setSearchInput] = useState(params.query || "");
   const [autocompleteOpen, setAutocompleteOpen] = useState(false);
@@ -147,6 +147,14 @@ function HomePageContent() {
     try {
       const viewed = localStorage.getItem("cq-recently-viewed");
       if (viewed) setRecentlyViewed(JSON.parse(viewed));
+    } catch {
+      // ignore
+    }
+    try {
+      const vm = localStorage.getItem("cq-view-mode");
+      if (vm && ["table", "grid", "list", "map"].includes(vm)) {
+        setViewMode(vm as ViewMode);
+      }
     } catch {
       // ignore
     }
@@ -1058,7 +1066,10 @@ function HomePageContent() {
               ] as const).map(({ mode, faIcon, label }) => (
                 <button
                   key={mode}
-                  onClick={() => setViewMode(mode)}
+                  onClick={() => {
+                    setViewMode(mode);
+                    localStorage.setItem("cq-view-mode", mode);
+                  }}
                   title={label}
                   className={cn(
                     "rounded-md p-1.5 transition-colors",
@@ -1240,6 +1251,7 @@ function HomePageContent() {
                 favoriteIds={favoriteIds}
                 onToggleFavorite={(id) => toggleFavoriteMutation.mutate(id)}
                 user={user}
+                isFiltered={!!(params.query || params.states || params.regions || params.types || params.sizes || params.acceptanceRanges || params.jesuitOnly || params.programCategories || showFavoritesOnly)}
               />
             )}
 
