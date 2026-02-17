@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { FaIcon } from "@/components/ui/fa-icon";
@@ -289,12 +289,16 @@ function CollegesTab() {
   const [editingCollege, setEditingCollege] = useState<College | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<College | null>(null);
   const [form, setForm] = useState<CollegeFormData>(EMPTY_COLLEGE_FORM);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchDeleteConfirm, setBatchDeleteConfirm] = useState(false);
+  const selectAllRef = useRef<HTMLInputElement>(null);
 
   // Debounce search
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedSearch(search);
       setPage(1);
+      setSelectedIds(new Set());
     }, 300);
     return () => clearTimeout(t);
   }, [search]);
@@ -377,6 +381,59 @@ function CollegesTab() {
     },
   });
 
+  const batchDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const res = await fetch("/api/admin/colleges", {
+        method: "DELETE",
+        headers: jsonHeaders,
+        body: JSON.stringify({ ids }),
+      });
+      if (!res.ok) throw new Error("Failed to delete colleges");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-colleges"] });
+      setSelectedIds(new Set());
+      setBatchDeleteConfirm(false);
+      toast({ title: `${data.deleted} college(s) deleted` });
+    },
+    onError: () => {
+      toast({ title: "Error deleting colleges", variant: "destructive" });
+    },
+  });
+
+  // ---- Selection helpers ----
+  function toggleSelectAll() {
+    const allOnPage = colleges.map((c) => c.id);
+    const allSelected = allOnPage.length > 0 && allOnPage.every((id) => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        allOnPage.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => new Set([...prev, ...allOnPage]));
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  // Update indeterminate state on the select-all checkbox
+  const allOnPageSelected = colleges.length > 0 && colleges.every((c) => selectedIds.has(c.id));
+  const someOnPageSelected = colleges.some((c) => selectedIds.has(c.id));
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = someOnPageSelected && !allOnPageSelected;
+    }
+  }, [someOnPageSelected, allOnPageSelected]);
+
   function openAdd() {
     setEditingCollege(null);
     setForm(EMPTY_COLLEGE_FORM);
@@ -427,10 +484,35 @@ function CollegesTab() {
             className="pl-10"
           />
         </div>
-        <Button className="bg-primary" onClick={openAdd}>
-          <FaIcon icon="plus" style="solid" className="mr-2 text-sm" />
-          Add College
-        </Button>
+        <div className="flex items-center gap-2">
+          {selectedIds.size > 0 && (
+            <>
+              <span className="text-sm font-medium text-muted-foreground">
+                {selectedIds.size} selected
+              </span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setBatchDeleteConfirm(true)}
+                className="gap-1.5"
+              >
+                <FaIcon icon="trash-can" style="solid" className="text-xs" />
+                Delete Selected
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedIds(new Set())}
+              >
+                Clear
+              </Button>
+            </>
+          )}
+          <Button className="bg-primary" onClick={openAdd}>
+            <FaIcon icon="plus" style="solid" className="mr-2 text-sm" />
+            Add College
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
@@ -448,6 +530,15 @@ function CollegesTab() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-gray-50/80">
+                  <th className="w-10 px-4 py-3">
+                    <input
+                      ref={selectAllRef}
+                      type="checkbox"
+                      checked={allOnPageSelected}
+                      onChange={toggleSelectAll}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                  </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Location</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Type</th>
@@ -458,7 +549,15 @@ function CollegesTab() {
               </thead>
               <tbody>
                 {colleges.map((c) => (
-                  <tr key={c.id} className="border-b last:border-b-0 hover:bg-gray-50/50">
+                  <tr key={c.id} className={`border-b last:border-b-0 ${selectedIds.has(c.id) ? "bg-primary/5" : "hover:bg-gray-50/50"}`}>
+                    <td className="w-10 px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(c.id)}
+                        onChange={() => toggleSelect(c.id)}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                    </td>
                     <td className="px-4 py-3 font-medium">{c.name}</td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {c.city && c.state ? `${c.city}, ${c.state}` : c.state || "--"}
@@ -510,7 +609,7 @@ function CollegesTab() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              onClick={() => { setPage((p) => Math.max(1, p - 1)); setSelectedIds(new Set()); }}
               disabled={page <= 1}
             >
               Previous
@@ -518,7 +617,7 @@ function CollegesTab() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              onClick={() => { setPage((p) => Math.min(totalPages, p + 1)); setSelectedIds(new Set()); }}
               disabled={page >= totalPages}
             >
               Next
@@ -718,6 +817,37 @@ function CollegesTab() {
                 <FaIcon icon="spinner" style="solid" className="mr-2 text-sm fa-spin" />
               )}
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch Delete Confirmation */}
+      <Dialog open={batchDeleteConfirm} onOpenChange={setBatchDeleteConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Delete {selectedIds.size} College{selectedIds.size !== 1 ? "s" : ""}
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete{" "}
+              <strong>{selectedIds.size}</strong> selected college
+              {selectedIds.size !== 1 ? "s" : ""}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBatchDeleteConfirm(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => batchDeleteMutation.mutate([...selectedIds])}
+              disabled={batchDeleteMutation.isPending}
+            >
+              {batchDeleteMutation.isPending && (
+                <FaIcon icon="spinner" style="solid" className="mr-2 text-sm fa-spin" />
+              )}
+              Delete {selectedIds.size} College{selectedIds.size !== 1 ? "s" : ""}
             </Button>
           </DialogFooter>
         </DialogContent>
