@@ -11,10 +11,11 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const limit = Math.min(parseInt(searchParams.get("limit") || "6"), 60);
 
-    // Fetch target college
+    // Fetch target college — only the fields needed for similarity scoring
+    const similarFields = "id,name,city,state,region,type,size,jesuit,enrollment,acceptance_rate,tuition_in_state,graduation_rate,sat_math,sat_reading,programs,latitude,longitude,website,net_cost";
     const { data: target, error: targetError } = await supabase
       .from("colleges")
-      .select("*")
+      .select(similarFields)
       .eq("id", id)
       .single();
 
@@ -25,10 +26,10 @@ export async function GET(
       );
     }
 
-    // Fetch candidates
+    // Fetch candidates — same fields, no need for description/full payload
     const { data: candidates, error: candidatesError } = await supabase
       .from("colleges")
-      .select("*")
+      .select(similarFields)
       .neq("id", id)
       .limit(200);
 
@@ -101,7 +102,9 @@ export async function GET(
         b.similarityScore - a.similarityScore
     );
 
-    return NextResponse.json(scored.slice(0, limit));
+    const response = NextResponse.json(scored.slice(0, limit));
+    response.headers.set("Cache-Control", "public, s-maxage=86400, stale-while-revalidate=86400");
+    return response;
   } catch (error) {
     console.error("Error finding similar colleges:", error);
     return NextResponse.json(

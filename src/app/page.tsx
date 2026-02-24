@@ -28,6 +28,9 @@ import {
 import { CollegeActions } from "@/components/college-actions";
 import { CollegeCard } from "@/components/college-card";
 import { CollegeTable } from "@/components/college-table";
+import { useFolders } from "@/hooks/use-folders";
+import { useClickOutside } from "@/hooks/use-click-outside";
+import { useUser } from "@/hooks/use-user";
 const CollegeMapView = dynamic(() => import("@/components/college-map-view"), {
   ssr: false,
   loading: () => (
@@ -128,6 +131,9 @@ function HomePageContent() {
   const [exportCopied, setExportCopied] = useState(false);
   const [copyDropdownOpen, setCopyDropdownOpen] = useState(false);
   const copyDropdownRef = useRef<HTMLDivElement>(null);
+  const folderDropdownRef = useRef<HTMLDivElement>(null);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [folderDropdownOpen, setFolderDropdownOpen] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<HTMLDivElement>(null);
@@ -160,24 +166,11 @@ function HomePageContent() {
     }
   }, []);
 
-  // ---- Copy dropdown: click-outside & Escape ----
-  useEffect(() => {
-    if (!copyDropdownOpen) return;
-    function handleClick(e: MouseEvent) {
-      if (copyDropdownRef.current && !copyDropdownRef.current.contains(e.target as Node)) {
-        setCopyDropdownOpen(false);
-      }
-    }
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setCopyDropdownOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handleClick);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [copyDropdownOpen]);
+  // ---- Dropdown click-outside & Escape ----
+  const closeCopyDropdown = useCallback(() => setCopyDropdownOpen(false), []);
+  const closeFolderDropdown = useCallback(() => setFolderDropdownOpen(false), []);
+  useClickOutside(copyDropdownRef, closeCopyDropdown, copyDropdownOpen);
+  useClickOutside(folderDropdownRef, closeFolderDropdown, folderDropdownOpen);
 
   // ---- Push new params to URL ----
   const updateParams = useCallback(
@@ -192,15 +185,7 @@ function HomePageContent() {
   );
 
   // ---- User auth ----
-  const { data: user } = useQuery<UserProfile | null>({
-    queryKey: ["me"],
-    queryFn: async () => {
-      const res = await fetch("/api/me");
-      if (!res.ok) return null;
-      return res.json();
-    },
-    retry: false,
-  });
+  const { data: user } = useUser();
 
   // ---- Favorites ----
   const { data: favoritesData } = useQuery<{ favorites: string[] }>({
@@ -217,6 +202,20 @@ function HomePageContent() {
     () => new Set(favoritesData?.favorites || []),
     [favoritesData]
   );
+
+  // ---- Folders ----
+  const { data: folders = [] } = useFolders(user);
+
+  const { data: folderItemIds } = useQuery<string[]>({
+    queryKey: ["folder-items", selectedFolderId],
+    queryFn: async () => {
+      const res = await fetch(`/api/folders/${selectedFolderId}/items`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.items || [];
+    },
+    enabled: !!selectedFolderId,
+  });
 
   const toggleFavoriteMutation = useMutation({
     mutationFn: async (collegeId: string) => {
@@ -235,13 +234,16 @@ function HomePageContent() {
     },
   });
 
-  // ---- Filter options ----
+  // ---- Filter options (stable data — long cache) ----
+  const filterStaleTime = 24 * 60 * 60 * 1000; // 1 day
+
   const { data: stateOptions = [] } = useQuery<string[]>({
     queryKey: ["filter-states"],
     queryFn: async () => {
       const res = await fetch("/api/colleges/filters/states");
       return res.json();
     },
+    staleTime: filterStaleTime,
   });
 
   const { data: regionOptions = [] } = useQuery<string[]>({
@@ -250,6 +252,7 @@ function HomePageContent() {
       const res = await fetch("/api/colleges/filters/regions");
       return res.json();
     },
+    staleTime: filterStaleTime,
   });
 
   const { data: typeOptions = [] } = useQuery<string[]>({
@@ -258,6 +261,7 @@ function HomePageContent() {
       const res = await fetch("/api/colleges/filters/types");
       return res.json();
     },
+    staleTime: filterStaleTime,
   });
 
   const { data: acceptanceRangeOptions = [] } = useQuery<string[]>({
@@ -266,6 +270,7 @@ function HomePageContent() {
       const res = await fetch("/api/colleges/filters/acceptance-ranges");
       return res.json();
     },
+    staleTime: filterStaleTime,
   });
 
   const { data: programCategoryOptions = [] } = useQuery<string[]>({
@@ -274,12 +279,17 @@ function HomePageContent() {
       const res = await fetch("/api/schools/categories");
       return res.json();
     },
+    staleTime: filterStaleTime,
   });
 
   // ---- Colleges query ----
   const collegeQueryParams = useMemo(() => {
     const p = { ...params };
-    if (showFavoritesOnly && favoriteIds.size > 0) {
+    // Folder selection takes priority over "show all favorites"
+    if (selectedFolderId && folderItemIds) {
+      // Use a non-existent UUID if folder is empty so the query returns 0 results
+      p.favoriteIds = folderItemIds.length > 0 ? folderItemIds.join(",") : "00000000-0000-0000-0000-000000000000";
+    } else if (showFavoritesOnly && favoriteIds.size > 0) {
       p.favoriteIds = Array.from(favoriteIds).join(",");
     }
     // Map view needs all results (up to 5000), not a single page
@@ -288,7 +298,7 @@ function HomePageContent() {
       p.page = 1;
     }
     return p;
-  }, [params, showFavoritesOnly, favoriteIds, viewMode]);
+  }, [params, showFavoritesOnly, favoriteIds, viewMode, selectedFolderId, folderItemIds]);
 
   const { data: collegesData, isLoading: collegesLoading, error: collegesError } = useQuery<{
     colleges: College[];
@@ -472,6 +482,7 @@ function HomePageContent() {
     });
     setSearchInput("");
     setShowFavoritesOnly(false);
+    setSelectedFolderId(null);
   }
 
   // ---- Saved filters ----
@@ -627,38 +638,127 @@ function HomePageContent() {
 
           {/* Right side: favorites + auth */}
           <div className="flex items-center gap-3">
-            {/* Favorites toggle */}
+            {/* Favorites toggle + folder dropdown */}
             {user && (
-              <Button
-                variant={showFavoritesOnly ? "default" : "outline"}
-                size="sm"
-                onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-                className={cn(
-                  "gap-1.5",
-                  showFavoritesOnly &&
-                    "bg-primary hover:bg-primary/90 text-white"
-                )}
-              >
-                <FaIcon
-                  icon="heart"
-                  style={showFavoritesOnly ? "solid" : "regular"}
-                  className="text-sm"
-                />
-                <span className="hidden sm:inline">Favorites</span>
-                {favoriteIds.size > 0 && (
-                  <Badge
-                    variant="secondary"
+              <div ref={folderDropdownRef} className="relative flex items-center">
+                <Button
+                  variant={showFavoritesOnly || selectedFolderId ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    if (selectedFolderId) {
+                      setSelectedFolderId(null);
+                    } else {
+                      setShowFavoritesOnly(!showFavoritesOnly);
+                    }
+                  }}
+                  className={cn(
+                    "gap-1.5 rounded-r-none border-r-0",
+                    (showFavoritesOnly || selectedFolderId) &&
+                      "bg-primary hover:bg-primary/90 text-white"
+                  )}
+                >
+                  <FaIcon
+                    icon={selectedFolderId ? "folder" : "heart"}
+                    style={(showFavoritesOnly || selectedFolderId) ? "solid" : "regular"}
+                    className="text-sm"
+                  />
+                  <span className="hidden sm:inline">
+                    {selectedFolderId
+                      ? (folders.find((f) => f.id === selectedFolderId)?.name || "Folder")
+                      : "Favorites"}
+                  </span>
+                  {!selectedFolderId && favoriteIds.size > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        "ml-0.5 h-5 min-w-5 justify-center px-1.5 text-[10px]",
+                        showFavoritesOnly
+                          ? "bg-white/20 text-white"
+                          : "bg-amber-100 text-amber-800"
+                      )}
+                    >
+                      {favoriteIds.size}
+                    </Badge>
+                  )}
+                </Button>
+                <Button
+                  variant={showFavoritesOnly || selectedFolderId ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFolderDropdownOpen((prev) => !prev)}
+                  className={cn(
+                    "rounded-l-none px-1.5",
+                    (showFavoritesOnly || selectedFolderId) &&
+                      "bg-primary hover:bg-primary/90 text-white border-l border-l-white/20"
+                  )}
+                >
+                  <FaIcon
+                    icon="chevron-down"
                     className={cn(
-                      "ml-0.5 h-5 min-w-5 justify-center px-1.5 text-[10px]",
-                      showFavoritesOnly
-                        ? "bg-white/20 text-white"
-                        : "bg-amber-100 text-amber-800"
+                      "text-[10px] transition-transform",
+                      folderDropdownOpen && "rotate-180"
                     )}
-                  >
-                    {favoriteIds.size}
-                  </Badge>
+                  />
+                </Button>
+                {folderDropdownOpen && (
+                  <div className="absolute right-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-lg border border-border bg-white shadow-lg">
+                    <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Folders
+                    </div>
+                    {/* All Favorites option */}
+                    <button
+                      onClick={() => {
+                        setSelectedFolderId(null);
+                        setShowFavoritesOnly(true);
+                        setFolderDropdownOpen(false);
+                      }}
+                      className={cn(
+                        "flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-gray-50",
+                        showFavoritesOnly && !selectedFolderId && "bg-amber-50 text-primary font-medium"
+                      )}
+                    >
+                      <FaIcon icon="heart" style="solid" className="text-sm text-red-400" />
+                      All Favorites
+                      {favoriteIds.size > 0 && (
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {favoriteIds.size}
+                        </span>
+                      )}
+                    </button>
+                    {folders.length > 0 && (
+                      <div className="border-t border-border">
+                        {folders.map((folder) => (
+                          <button
+                            key={folder.id}
+                            onClick={() => {
+                              setSelectedFolderId(
+                                selectedFolderId === folder.id ? null : folder.id
+                              );
+                              setShowFavoritesOnly(false);
+                              setFolderDropdownOpen(false);
+                            }}
+                            className={cn(
+                              "flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-gray-50",
+                              selectedFolderId === folder.id && "bg-amber-50 text-primary font-medium"
+                            )}
+                          >
+                            <FaIcon
+                              icon="folder"
+                              style={selectedFolderId === folder.id ? "solid" : "duotone"}
+                              className="text-sm"
+                            />
+                            <span className="truncate">{folder.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {folders.length === 0 && (
+                      <div className="px-3 py-2 text-xs text-muted-foreground italic">
+                        No folders yet
+                      </div>
+                    )}
+                  </div>
                 )}
-              </Button>
+              </div>
             )}
 
             {/* Copy for AI dropdown */}
@@ -995,9 +1095,11 @@ function HomePageContent() {
                   ? "Loading..."
                   : `${formatNumber(totalResults)} college${totalResults !== 1 ? "s" : ""} found`}
               </h1>
-              {showFavoritesOnly && (
+              {(showFavoritesOnly || selectedFolderId) && (
                 <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50">
-                  Showing favorites
+                  {selectedFolderId
+                    ? `Folder: ${folders.find((f) => f.id === selectedFolderId)?.name || "..."}`
+                    : "Showing favorites"}
                 </Badge>
               )}
             </div>
@@ -1251,7 +1353,7 @@ function HomePageContent() {
                 favoriteIds={favoriteIds}
                 onToggleFavorite={(id) => toggleFavoriteMutation.mutate(id)}
                 user={user}
-                isFiltered={!!(params.query || params.states || params.regions || params.types || params.sizes || params.acceptanceRanges || params.jesuitOnly || params.programCategories || showFavoritesOnly)}
+                isFiltered={!!(params.query || params.states || params.regions || params.types || params.sizes || params.acceptanceRanges || params.jesuitOnly || params.programCategories || showFavoritesOnly || selectedFolderId)}
               />
             )}
 
@@ -1336,17 +1438,11 @@ function FilterMultiSelect({
   const [open, setOpen] = useState(false);
   const [filterText, setFilterText] = useState("");
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-        setFilterText("");
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+  const closeFilter = useCallback(() => {
+    setOpen(false);
+    setFilterText("");
   }, []);
+  useClickOutside(ref, closeFilter, open);
 
   const filtered = filterText
     ? options.filter((o) =>

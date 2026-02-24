@@ -17,7 +17,9 @@ export async function GET() {
       (data || []).map((row) => row.state as string).filter(Boolean)
     )].sort();
 
-    return NextResponse.json(states);
+    const response = NextResponse.json(states);
+    response.headers.set("Cache-Control", "public, s-maxage=86400, stale-while-revalidate=86400");
+    return response;
   } catch (error) {
     console.error("Error fetching states:", error);
     return NextResponse.json(

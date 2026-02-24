@@ -213,6 +213,12 @@ export function CollegeResources({
       toast({ title: "URL is required", variant: "destructive" });
       return;
     }
+    try {
+      new URL(form.url.trim());
+    } catch {
+      toast({ title: "Please enter a valid URL (e.g. https://...)", variant: "destructive" });
+      return;
+    }
 
     if (editingId) {
       updateMutation.mutate({ id: editingId, data: form });
@@ -298,6 +304,7 @@ export function CollegeResources({
                         size="icon"
                         className="h-6 w-6"
                         onClick={() => openEditDialog(resource)}
+                        title="Edit resource"
                       >
                         <FaIcon icon="pen" style="duotone" className="text-[10px] text-muted-foreground" />
                       </Button>
@@ -309,6 +316,7 @@ export function CollegeResources({
                             className="h-6 w-6"
                             onClick={() => deleteMutation.mutate(resource.id)}
                             disabled={deleteMutation.isPending}
+                            title="Confirm delete"
                           >
                             <FaIcon
                               icon={deleteMutation.isPending ? "spinner" : "check"}
@@ -321,6 +329,7 @@ export function CollegeResources({
                             size="icon"
                             className="h-6 w-6"
                             onClick={() => setDeleteConfirmId(null)}
+                            title="Cancel delete"
                           >
                             <FaIcon icon="xmark" style="solid" className="text-[10px] text-muted-foreground" />
                           </Button>
@@ -331,6 +340,7 @@ export function CollegeResources({
                           size="icon"
                           className="h-6 w-6"
                           onClick={() => setDeleteConfirmId(resource.id)}
+                          title="Delete resource"
                         >
                           <FaIcon icon="trash" style="duotone" className="text-[10px] text-red-400" />
                         </Button>

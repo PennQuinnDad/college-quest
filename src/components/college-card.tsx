@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FaIcon } from "@/components/ui/fa-icon";
@@ -12,7 +13,7 @@ interface CollegeCardProps {
   user: UserProfile | null | undefined;
 }
 
-export function CollegeCard({
+export const CollegeCard = memo(function CollegeCard({
   college,
   isFavorite,
   onToggleFavorite,
@@ -83,4 +84,4 @@ export function CollegeCard({
       </CardContent>
     </Card>
   );
-}
+});

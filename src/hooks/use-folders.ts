@@ -13,6 +13,7 @@ export function useFolders(user: unknown) {
       return data.folders || [];
     },
     enabled: !!user,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 

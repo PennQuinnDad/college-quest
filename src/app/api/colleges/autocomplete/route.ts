@@ -19,7 +19,9 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json(data || []);
+    const response = NextResponse.json(data || []);
+    response.headers.set("Cache-Control", "public, s-maxage=300, stale-while-revalidate=3600");
+    return response;
   } catch (error) {
     console.error("Error in autocomplete:", error);
     return NextResponse.json(

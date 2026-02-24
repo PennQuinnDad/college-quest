@@ -1,6 +1,111 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 
+// ── Parsed filter parameters ──────────────────────────────────────────────────
+interface FilterParams {
+  query: string;
+  states: string | null;
+  regions: string | null;
+  types: string | null;
+  sizes: string | null;
+  favoriteIds: string | null;
+  acceptanceRateMin: string | null;
+  acceptanceRateMax: string | null;
+  acceptanceRanges: string | null;
+  tuitionMin: string | null;
+  tuitionMax: string | null;
+  enrollmentMin: string | null;
+  enrollmentMax: string | null;
+  jesuitOnly: string | null;
+  programCollegeIds: string[] | null;
+}
+
+// ── Apply all filters to a Supabase query builder ─────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function applyFilters<T extends Record<string, any>>(
+  dbQuery: T,
+  f: FilterParams,
+): T {
+  let q = dbQuery;
+
+  // Text search
+  if (f.query) {
+    const like = `%${f.query}%`;
+    q = q.or(
+      `name.ilike.${like},city.ilike.${like},state.ilike.${like},region.ilike.${like},type.ilike.${like},description.ilike.${like},website.ilike.${like}`,
+    ) as T;
+  }
+
+  // Enum / set filters
+  if (f.states) q = q.in("state", f.states.split(",").map((s) => s.trim())) as T;
+  if (f.regions) q = q.in("region", f.regions.split(",").map((r) => r.trim())) as T;
+  if (f.types) q = q.in("type", f.types.split(",").map((t) => t.trim())) as T;
+  if (f.sizes) q = q.in("size", f.sizes.split(",").map((s) => s.trim())) as T;
+  if (f.jesuitOnly === "true") q = q.eq("jesuit", true) as T;
+  if (f.programCollegeIds) q = q.in("id", f.programCollegeIds) as T;
+  if (f.favoriteIds) q = q.in("id", f.favoriteIds.split(",").map((id) => id.trim())) as T;
+
+  // Acceptance rate
+  if (f.acceptanceRanges) {
+    const ranges = f.acceptanceRanges.split(",").map((r) => r.trim());
+    const orConditions: string[] = [];
+    for (const range of ranges) {
+      if (range.includes("0-15")) {
+        orConditions.push("and(acceptance_rate.gt.0,acceptance_rate.lte.15)");
+      } else if (range.includes("15-30")) {
+        orConditions.push("and(acceptance_rate.gte.15,acceptance_rate.lte.30)");
+      } else if (range.includes("30-50")) {
+        orConditions.push("and(acceptance_rate.gte.30,acceptance_rate.lte.50)");
+      } else if (range.includes("50-75")) {
+        orConditions.push("and(acceptance_rate.gte.50,acceptance_rate.lte.75)");
+      } else if (range.includes("75")) {
+        orConditions.push("acceptance_rate.gte.75");
+      }
+    }
+    if (orConditions.length > 0) q = q.or(orConditions.join(",")) as T;
+  } else {
+    if (f.acceptanceRateMin) {
+      const v = parseFloat(f.acceptanceRateMin);
+      if (!isNaN(v)) q = q.gte("acceptance_rate", v) as T;
+    }
+    if (f.acceptanceRateMax) {
+      const v = parseFloat(f.acceptanceRateMax);
+      if (!isNaN(v)) q = q.lte("acceptance_rate", v) as T;
+    }
+  }
+
+  // Tuition
+  if (f.tuitionMin) {
+    const v = parseInt(f.tuitionMin);
+    if (!isNaN(v)) q = q.gte("tuition_in_state", v) as T;
+  }
+  if (f.tuitionMax) {
+    const v = parseInt(f.tuitionMax);
+    if (!isNaN(v)) q = q.lte("tuition_in_state", v) as T;
+  }
+
+  // Enrollment
+  if (f.enrollmentMin) {
+    const v = parseInt(f.enrollmentMin);
+    if (!isNaN(v)) q = q.gte("enrollment", v) as T;
+  }
+  if (f.enrollmentMax) {
+    const v = parseInt(f.enrollmentMax);
+    if (!isNaN(v)) q = q.lte("enrollment", v) as T;
+  }
+
+  return q;
+}
+
+// ── Helper: attach cache headers to a JSON response ───────────────────────────
+function cachedJson(data: unknown, maxAge = 60) {
+  const response = NextResponse.json(data);
+  response.headers.set("Cache-Control", `public, s-maxage=${maxAge}, stale-while-revalidate=300`);
+  return response;
+}
+
+// ── GET handler ───────────────────────────────────────────────────────────────
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceClient();
@@ -11,19 +116,7 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(5000, Math.max(1, parseInt(searchParams.get("limit") || "48") || 48));
     const sortBy = searchParams.get("sortBy") || "name";
     const sortOrder = searchParams.get("sortOrder") || "asc";
-    const states = searchParams.get("states");
-    const regions = searchParams.get("regions");
-    const types = searchParams.get("types");
-    const sizes = searchParams.get("sizes");
     const favoriteIds = searchParams.get("favoriteIds");
-    const acceptanceRateMin = searchParams.get("acceptanceRateMin");
-    const acceptanceRateMax = searchParams.get("acceptanceRateMax");
-    const acceptanceRanges = searchParams.get("acceptanceRanges");
-    const tuitionMin = searchParams.get("tuitionMin");
-    const tuitionMax = searchParams.get("tuitionMax");
-    const enrollmentMin = searchParams.get("enrollmentMin");
-    const enrollmentMax = searchParams.get("enrollmentMax");
-    const jesuitOnly = searchParams.get("jesuitOnly");
     const programCategories = searchParams.get("programCategories");
 
     // If filtering by program categories, get matching college IDs first
@@ -41,82 +134,24 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    let dbQuery = supabase
-      .from("colleges")
-      .select("*", { count: "exact" });
-
-    // Text search
-    if (query) {
-      const q = `%${query}%`;
-      dbQuery = dbQuery.or(
-        `name.ilike.${q},city.ilike.${q},state.ilike.${q},region.ilike.${q},type.ilike.${q},description.ilike.${q},website.ilike.${q}`
-      );
-    }
-
-    // Filters
-    if (states) {
-      dbQuery = dbQuery.in("state", states.split(",").map((s) => s.trim()));
-    }
-    if (regions) {
-      dbQuery = dbQuery.in("region", regions.split(",").map((r) => r.trim()));
-    }
-    if (types) {
-      dbQuery = dbQuery.in("type", types.split(",").map((t) => t.trim()));
-    }
-    if (sizes) {
-      dbQuery = dbQuery.in("size", sizes.split(",").map((s) => s.trim()));
-    }
-    if (jesuitOnly === "true") {
-      dbQuery = dbQuery.eq("jesuit", true);
-    }
-    if (programCollegeIds) {
-      dbQuery = dbQuery.in("id", programCollegeIds);
-    }
-    if (favoriteIds) {
-      dbQuery = dbQuery.in("id", favoriteIds.split(",").map((id) => id.trim()));
-    }
-
-    // Acceptance rate ranges
-    if (acceptanceRanges) {
-      const ranges = acceptanceRanges.split(",").map((r) => r.trim());
-      const orConditions: string[] = [];
-      for (const range of ranges) {
-        if (range.includes("0-15")) {
-          orConditions.push("and(acceptance_rate.gt.0,acceptance_rate.lte.15)");
-        } else if (range.includes("15-30")) {
-          orConditions.push("and(acceptance_rate.gte.15,acceptance_rate.lte.30)");
-        } else if (range.includes("30-50")) {
-          orConditions.push("and(acceptance_rate.gte.30,acceptance_rate.lte.50)");
-        } else if (range.includes("50-75")) {
-          orConditions.push("and(acceptance_rate.gte.50,acceptance_rate.lte.75)");
-        } else if (range.includes("75")) {
-          orConditions.push("acceptance_rate.gte.75");
-        }
-      }
-      if (orConditions.length > 0) {
-        dbQuery = dbQuery.or(orConditions.join(","));
-      }
-    } else {
-      if (acceptanceRateMin) {
-        dbQuery = dbQuery.gte("acceptance_rate", parseFloat(acceptanceRateMin));
-      }
-      if (acceptanceRateMax) {
-        dbQuery = dbQuery.lte("acceptance_rate", parseFloat(acceptanceRateMax));
-      }
-    }
-
-    if (tuitionMin) {
-      dbQuery = dbQuery.gte("tuition_in_state", parseInt(tuitionMin));
-    }
-    if (tuitionMax) {
-      dbQuery = dbQuery.lte("tuition_in_state", parseInt(tuitionMax));
-    }
-    if (enrollmentMin) {
-      dbQuery = dbQuery.gte("enrollment", parseInt(enrollmentMin));
-    }
-    if (enrollmentMax) {
-      dbQuery = dbQuery.lte("enrollment", parseInt(enrollmentMax));
-    }
+    // Shared filter params — parsed once, used for every query
+    const filters: FilterParams = {
+      query,
+      states: searchParams.get("states"),
+      regions: searchParams.get("regions"),
+      types: searchParams.get("types"),
+      sizes: searchParams.get("sizes"),
+      favoriteIds,
+      acceptanceRateMin: searchParams.get("acceptanceRateMin"),
+      acceptanceRateMax: searchParams.get("acceptanceRateMax"),
+      acceptanceRanges: searchParams.get("acceptanceRanges"),
+      tuitionMin: searchParams.get("tuitionMin"),
+      tuitionMax: searchParams.get("tuitionMax"),
+      enrollmentMin: searchParams.get("enrollmentMin"),
+      enrollmentMax: searchParams.get("enrollmentMax"),
+      jesuitOnly: searchParams.get("jesuitOnly"),
+      programCollegeIds,
+    };
 
     // Sorting
     const sortColumn = {
@@ -131,8 +166,14 @@ export async function GET(request: NextRequest) {
       netCost: "net_cost",
     }[sortBy] || "name";
 
+    // ── Build main query ──────────────────────────────────────────────────
+    let dbQuery = applyFilters(
+      supabase.from("colleges").select("*", { count: "exact" }),
+      filters,
+    );
+
+    // Relevance sort: fetch all then sort client-side
     if (sortBy === "relevance" && favoriteIds) {
-      // For relevance sorting, fetch all then sort client-side
       const { data, count, error } = await dbQuery;
       if (error) throw error;
 
@@ -144,7 +185,7 @@ export async function GET(request: NextRequest) {
       });
 
       const start = (page - 1) * limit;
-      return NextResponse.json({
+      return cachedJson({
         colleges: sorted.slice(start, start + limit),
         total: count || 0,
       });
@@ -152,8 +193,9 @@ export async function GET(request: NextRequest) {
 
     dbQuery = dbQuery.order(sortColumn, { ascending: sortOrder === "asc" });
 
-    // Pagination — Supabase caps at 1000 rows per request, so for large
-    // limits (e.g. map view requesting all results) we paginate internally.
+    // ── Pagination ────────────────────────────────────────────────────────
+    // Supabase caps at 1000 rows per request, so for large limits
+    // (e.g. map view requesting all results) we paginate internally.
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
@@ -161,7 +203,7 @@ export async function GET(request: NextRequest) {
       dbQuery = dbQuery.range(from, to);
       const { data, count, error } = await dbQuery;
       if (error) throw error;
-      return NextResponse.json({
+      return cachedJson({
         colleges: data || [],
         total: count || 0,
       });
@@ -175,39 +217,10 @@ export async function GET(request: NextRequest) {
 
     while (offset < end) {
       const batchEnd = Math.min(offset + 999, end - 1);
-      // Re-build query with all filters for this batch
-      let bq = supabase.from("colleges").select("*", { count: offset === from ? "exact" : undefined });
-      // Re-apply filters
-      if (query) {
-        const q = `%${query}%`;
-        bq = bq.or(`name.ilike.${q},city.ilike.${q},state.ilike.${q},region.ilike.${q},type.ilike.${q},description.ilike.${q},website.ilike.${q}`);
-      }
-      if (states) bq = bq.in("state", states.split(",").map((s) => s.trim()));
-      if (regions) bq = bq.in("region", regions.split(",").map((r) => r.trim()));
-      if (types) bq = bq.in("type", types.split(",").map((t) => t.trim()));
-      if (sizes) bq = bq.in("size", sizes.split(",").map((s) => s.trim()));
-      if (jesuitOnly === "true") bq = bq.eq("jesuit", true);
-      if (programCollegeIds) bq = bq.in("id", programCollegeIds);
-      if (favoriteIds) bq = bq.in("id", favoriteIds.split(",").map((id) => id.trim()));
-      if (acceptanceRanges) {
-        const ranges = acceptanceRanges.split(",").map((r) => r.trim());
-        const ors: string[] = [];
-        for (const range of ranges) {
-          if (range.includes("0-15")) ors.push("and(acceptance_rate.gt.0,acceptance_rate.lte.15)");
-          else if (range.includes("15-30")) ors.push("and(acceptance_rate.gte.15,acceptance_rate.lte.30)");
-          else if (range.includes("30-50")) ors.push("and(acceptance_rate.gte.30,acceptance_rate.lte.50)");
-          else if (range.includes("50-75")) ors.push("and(acceptance_rate.gte.50,acceptance_rate.lte.75)");
-          else if (range.includes("75")) ors.push("acceptance_rate.gte.75");
-        }
-        if (ors.length > 0) bq = bq.or(ors.join(","));
-      } else {
-        if (acceptanceRateMin) bq = bq.gte("acceptance_rate", parseFloat(acceptanceRateMin));
-        if (acceptanceRateMax) bq = bq.lte("acceptance_rate", parseFloat(acceptanceRateMax));
-      }
-      if (tuitionMin) bq = bq.gte("tuition_in_state", parseInt(tuitionMin));
-      if (tuitionMax) bq = bq.lte("tuition_in_state", parseInt(tuitionMax));
-      if (enrollmentMin) bq = bq.gte("enrollment", parseInt(enrollmentMin));
-      if (enrollmentMax) bq = bq.lte("enrollment", parseInt(enrollmentMax));
+      let bq = applyFilters(
+        supabase.from("colleges").select("*", { count: offset === from ? "exact" : undefined }),
+        filters,
+      );
       bq = bq.order(sortColumn, { ascending: sortOrder === "asc" });
       bq = bq.range(offset, batchEnd);
 
@@ -220,7 +233,7 @@ export async function GET(request: NextRequest) {
       offset = batchEnd + 1;
     }
 
-    return NextResponse.json({
+    return cachedJson({
       colleges: allData,
       total: totalCount,
     });
@@ -228,7 +241,7 @@ export async function GET(request: NextRequest) {
     console.error("Error fetching colleges:", error);
     return NextResponse.json(
       { error: "Failed to fetch colleges" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

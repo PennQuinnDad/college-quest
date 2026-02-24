@@ -17,7 +17,9 @@ export async function GET() {
       (data || []).map((row) => row.region as string).filter(Boolean)
     )].sort();
 
-    return NextResponse.json(regions);
+    const response = NextResponse.json(regions);
+    response.headers.set("Cache-Control", "public, s-maxage=86400, stale-while-revalidate=86400");
+    return response;
   } catch (error) {
     console.error("Error fetching regions:", error);
     return NextResponse.json(

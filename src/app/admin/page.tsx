@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useUser } from "@/hooks/use-user";
 import { FaIcon } from "@/components/ui/fa-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -148,15 +149,7 @@ const COLLEGE_SIZES = ["Small", "Medium", "Large"];
 // ────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
-  const { data: user, isLoading: userLoading } = useQuery<UserProfile | null>({
-    queryKey: ["me"],
-    queryFn: async () => {
-      const res = await fetch("/api/me");
-      if (!res.ok) return null;
-      return res.json();
-    },
-    retry: false,
-  });
+  const { data: user, isLoading: userLoading } = useUser();
 
   const isAdmin = user?.role === "admin";
 
@@ -536,6 +529,7 @@ function CollegesTab() {
                       type="checkbox"
                       checked={allOnPageSelected}
                       onChange={toggleSelectAll}
+                      aria-label="Select all colleges on this page"
                       className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                     />
                   </th>
@@ -555,6 +549,7 @@ function CollegesTab() {
                         type="checkbox"
                         checked={selectedIds.has(c.id)}
                         onChange={() => toggleSelect(c.id)}
+                        aria-label={`Select ${c.name}`}
                         className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                       />
                     </td>
@@ -1338,8 +1333,8 @@ function UsersTab() {
 
   function handleAddEmail() {
     const email = newEmail.trim().toLowerCase();
-    if (!email || !email.includes("@")) {
-      toast({ title: "Please enter a valid email", variant: "destructive" });
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast({ title: "Please enter a valid email address", variant: "destructive" });
       return;
     }
     addMutation.mutate(email);

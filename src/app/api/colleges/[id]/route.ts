@@ -26,7 +26,9 @@ export async function GET(
       throw error;
     }
 
-    return NextResponse.json(data);
+    const response = NextResponse.json(data);
+    response.headers.set("Cache-Control", "public, s-maxage=3600, stale-while-revalidate=86400");
+    return response;
   } catch (error) {
     console.error("Error fetching college:", error);
     return NextResponse.json(

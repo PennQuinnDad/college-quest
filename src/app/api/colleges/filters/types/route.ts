@@ -17,7 +17,9 @@ export async function GET() {
       (data || []).map((row) => row.type as string).filter(Boolean)
     )].sort();
 
-    return NextResponse.json(types);
+    const response = NextResponse.json(types);
+    response.headers.set("Cache-Control", "public, s-maxage=86400, stale-while-revalidate=86400");
+    return response;
   } catch (error) {
     console.error("Error fetching types:", error);
     return NextResponse.json(

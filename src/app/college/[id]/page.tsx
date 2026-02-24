@@ -5,6 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useUser } from "@/hooks/use-user";
 import { FaIcon } from "@/components/ui/fa-icon";
 import { Button } from "@/components/ui/button";
 import {
@@ -199,15 +200,7 @@ export default function CollegeDetailPage({
     },
   });
 
-  const { data: user } = useQuery<{ id: string; email: string; role: string } | null>({
-    queryKey: ["me"],
-    queryFn: async () => {
-      const res = await fetch("/api/me");
-      if (!res.ok) return null;
-      return res.json();
-    },
-    retry: false,
-  });
+  const { data: user } = useUser();
 
   const { data: favoriteData } = useQuery<{ isFavorite: boolean }>({
     queryKey: ["favorite", id],
@@ -463,6 +456,7 @@ export default function CollegeDetailPage({
                   className="h-7 w-7"
                   disabled={!prevId}
                   onClick={() => prevId && router.push(`/college/${prevId}`)}
+                  title="Previous college"
                 >
                   <FaIcon icon="chevron-left" className="text-xs" />
                 </Button>
@@ -472,6 +466,7 @@ export default function CollegeDetailPage({
                   className="h-7 w-7"
                   disabled={!nextId}
                   onClick={() => nextId && router.push(`/college/${nextId}`)}
+                  title="Next college"
                 >
                   <FaIcon icon="chevron-right" className="text-xs" />
                 </Button>

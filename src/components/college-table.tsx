@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FaIcon } from "@/components/ui/fa-icon";
 import { CollegeActions } from "@/components/college-actions";
+import { useClickOutside } from "@/hooks/use-click-outside";
 import { cn, formatCurrency, formatPercent } from "@/lib/utils";
 import type { College, UserProfile } from "@/lib/types";
 
@@ -63,7 +64,7 @@ const LS_COL_VISIBILITY = "cq-table-col-visibility";
 // Component
 // ---------------------------------------------------------------------------
 
-export function CollegeTable({
+export const CollegeTable = memo(function CollegeTable({
   colleges,
   sortBy,
   sortOrder,
@@ -111,25 +112,9 @@ export function CollegeTable({
     }
   }, [colMenuOpen]);
 
-  useEffect(() => {
-    if (!colMenuOpen) return;
-    function handleClick(e: MouseEvent) {
-      if (
-        colMenuRef.current && !colMenuRef.current.contains(e.target as Node) &&
-        gearBtnRef.current && !gearBtnRef.current.contains(e.target as Node)
-      )
-        setColMenuOpen(false);
-    }
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setColMenuOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handleClick);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [colMenuOpen]);
+  const closeColMenu = useCallback(() => setColMenuOpen(false), []);
+  const gearBtnExtraRefs = useRef([gearBtnRef]);
+  useClickOutside(colMenuRef, closeColMenu, colMenuOpen, gearBtnExtraRefs.current);
 
   function toggleColumnVisibility(colId: string) {
     setVisibleCols((prev) => {
@@ -510,4 +495,4 @@ export function CollegeTable({
         )}
     </div>
   );
-}
+});

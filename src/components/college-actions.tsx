@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { memo, useState, useRef, useCallback, useEffect } from "react";
 import { FaIcon } from "@/components/ui/fa-icon";
+import { useClickOutside } from "@/hooks/use-click-outside";
 import { cn } from "@/lib/utils";
 import {
   useFolders,
@@ -18,7 +19,7 @@ interface CollegeActionsProps {
   variant: "table" | "grid" | "list" | "detail";
 }
 
-export function CollegeActions({
+export const CollegeActions = memo(function CollegeActions({
   collegeId,
   isFavorite,
   onToggleFavorite,
@@ -36,33 +37,13 @@ export function CollegeActions({
   const toggleFolderItem = useToggleFolderItem();
   const createFolder = useCreateFolder();
 
-  // Click-outside to close
-  useEffect(() => {
-    if (!open) return;
-    function handleClick(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setCreating(false);
-        setNewFolderName("");
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [open]);
-
-  // Escape to close
-  useEffect(() => {
-    if (!open) return;
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setOpen(false);
-        setCreating(false);
-        setNewFolderName("");
-      }
-    }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open]);
+  // Click-outside & Escape to close
+  const closeDropdown = useCallback(() => {
+    setOpen(false);
+    setCreating(false);
+    setNewFolderName("");
+  }, []);
+  useClickOutside(dropdownRef, closeDropdown, open);
 
   // Focus input when "New Folder" mode activates
   useEffect(() => {
@@ -198,6 +179,7 @@ export function CollegeActions({
         <button
           onClick={onToggleFavorite}
           className="absolute top-2 right-2 rounded-full bg-white/90 p-1.5 shadow-sm transition-colors hover:bg-white"
+          title={isFavorite ? "Remove from favorites" : "Add to favorites"}
         >
           <FaIcon
             icon="heart"
@@ -209,6 +191,7 @@ export function CollegeActions({
           <button
             onClick={() => setOpen(!open)}
             className="rounded-full bg-white/90 p-1.5 shadow-sm transition-colors hover:bg-white"
+            title="Folder options"
           >
             <FaIcon icon="ellipsis" style="solid" className="text-sm text-muted-foreground" />
           </button>
@@ -225,6 +208,7 @@ export function CollegeActions({
         <button
           onClick={() => setOpen(!open)}
           className="rounded-md p-1.5 transition-colors hover:bg-gray-100"
+          title="Folder options"
         >
           <FaIcon icon="ellipsis" style="solid" className="text-sm text-muted-foreground" />
         </button>
@@ -265,4 +249,4 @@ export function CollegeActions({
       </div>
     </div>
   );
-}
+});
