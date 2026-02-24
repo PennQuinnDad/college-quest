@@ -120,12 +120,24 @@ function HomePageContent() {
   const params = useMemo(() => parseSearchParams(searchParams), [searchParams]);
 
   // ---- Local UI state ----
-  const [viewMode, setViewMode] = useState<ViewMode>("map");
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try {
+      const vm = localStorage.getItem("cq-view-mode");
+      if (vm && ["table", "grid", "list", "map"].includes(vm)) return vm as ViewMode;
+    } catch { /* ignore */ }
+    return "map";
+  });
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [searchInput, setSearchInput] = useState(params.query || "");
   const [autocompleteOpen, setAutocompleteOpen] = useState(false);
   const [autocompleteIndex, setAutocompleteIndex] = useState(-1);
-  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>(() => {
+    try {
+      const stored = localStorage.getItem("cq-saved-filters");
+      if (stored) return JSON.parse(stored);
+    } catch { /* ignore */ }
+    return [];
+  });
   const [saveFilterName, setSaveFilterName] = useState("");
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [exportCopied, setExportCopied] = useState(false);
@@ -140,31 +152,16 @@ function HomePageContent() {
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // ---- Recently viewed colleges ----
-  const [recentlyViewed, setRecentlyViewed] = useState<{ id: string; name: string; city: string; state: string }[]>([]);
-
-  // ---- Load saved filters & recently viewed from localStorage ----
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("cq-saved-filters");
-      if (stored) setSavedFilters(JSON.parse(stored));
-    } catch {
-      // ignore
-    }
+  const [recentlyViewed, setRecentlyViewed] = useState<{ id: string; name: string; city: string; state: string }[]>(() => {
     try {
       const viewed = localStorage.getItem("cq-recently-viewed");
-      if (viewed) setRecentlyViewed(JSON.parse(viewed));
-    } catch {
-      // ignore
-    }
-    try {
-      const vm = localStorage.getItem("cq-view-mode");
-      if (vm && ["table", "grid", "list", "map"].includes(vm)) {
-        setViewMode(vm as ViewMode);
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
+      if (viewed) return JSON.parse(viewed);
+    } catch { /* ignore */ }
+    return [];
+  });
+
+  // saved filters, recently viewed, and view mode are now loaded
+  // via lazy state initializers above — no effect needed.
 
   // ---- Dropdown click-outside & Escape ----
   const closeCopyDropdown = useCallback(() => setCopyDropdownOpen(false), []);
@@ -313,7 +310,7 @@ function HomePageContent() {
     },
   });
 
-  const colleges = collegesData?.colleges || [];
+  const colleges = useMemo(() => collegesData?.colleges ?? [], [collegesData?.colleges]);
   const totalResults = collegesData?.total || 0;
   const currentPage = params.page || 1;
   const pageSize = params.limit || 48;

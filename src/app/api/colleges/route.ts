@@ -22,8 +22,7 @@ interface FilterParams {
 }
 
 // ── Apply all filters to a Supabase query builder ─────────────────────────────
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function applyFilters<T extends Record<string, any>>(
+function applyFilters<T extends Record<string, unknown>>(
   dbQuery: T,
   f: FilterParams,
 ): T {

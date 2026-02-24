@@ -157,22 +157,16 @@ export default function CollegeDetailPage({
   const queryClient = useQueryClient();
 
   // ---- Search context from sessionStorage ----
-  const [resultIds, setResultIds] = useState<string[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(-1);
-
-  useEffect(() => {
+  const resultIds = useMemo(() => {
     try {
       const stored = sessionStorage.getItem("cq-search-results");
-      if (stored) {
-        const ids: string[] = JSON.parse(stored);
-        setResultIds(ids);
-        const idx = ids.indexOf(id);
-        setCurrentIndex(idx);
-      }
+      if (stored) return JSON.parse(stored) as string[];
     } catch {
       // ignore
     }
-  }, [id]);
+    return [] as string[];
+  }, []);
+  const currentIndex = resultIds.indexOf(id);
 
   const totalResults = resultIds.length;
   const hasSearchContext = currentIndex >= 0 && totalResults > 0;

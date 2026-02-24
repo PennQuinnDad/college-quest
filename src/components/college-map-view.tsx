@@ -30,8 +30,7 @@ const defaultIcon = L.icon({
 });
 
 // Custom cluster icon — white circle with indigo border for readability
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function createClusterIcon(cluster: any) {
+function createClusterIcon(cluster: { getChildCount: () => number }) {
   const count = cluster.getChildCount();
   const size = count < 10 ? 32 : count < 100 ? 36 : 40;
 
