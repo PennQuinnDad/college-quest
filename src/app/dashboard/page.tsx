@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@/hooks/use-user";
 import { FaIcon } from "@/components/ui/fa-icon";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,17 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn, formatPercent, formatCurrency } from "@/lib/utils";
-import type { StudentSummary, ActivityEvent, CollegeApplication, ApplicationStatus } from "@/lib/types";
+import type { StudentSummary, ActivityEvent, CollegeApplication, CollegeSuggestion, ApplicationStatus } from "@/lib/types";
+
+interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string | null;
+  link: string | null;
+  read: boolean;
+  createdAt: string;
+}
 
 interface StudentFavoriteCollege {
   id: string;
@@ -143,43 +153,9 @@ export default function DashboardPage() {
     );
   }
 
-  // ---- Student view: redirect to main page ----
+  // ---- Student Dashboard ----
   if (!isParent) {
-    return (
-      <div className="min-h-screen bg-background">
-        <header className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur">
-          <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-            <div className="flex items-center gap-3">
-              <Link href="/" className="text-muted-foreground hover:text-foreground">
-                <FaIcon icon="arrow-left" style="solid" className="text-sm" />
-              </Link>
-              <h1 className="text-lg font-semibold">Dashboard</h1>
-            </div>
-          </div>
-        </header>
-        <main className="mx-auto max-w-5xl px-4 py-12 text-center">
-          <FaIcon icon="graduation-cap" style="duotone" className="mb-4 text-4xl text-primary" />
-          <h2 className="text-xl font-semibold">Student Dashboard</h2>
-          <p className="mt-2 text-muted-foreground">
-            Your college search is on the main page.
-          </p>
-          <div className="mt-6 flex justify-center gap-3">
-            <Link href="/">
-              <Button>
-                <FaIcon icon="search" style="solid" className="mr-2 text-sm" />
-                Explore Colleges
-              </Button>
-            </Link>
-            <Link href="/settings/family">
-              <Button variant="outline">
-                <FaIcon icon="users" style="duotone" className="mr-2 text-sm" />
-                Family Connections
-              </Button>
-            </Link>
-          </div>
-        </main>
-      </div>
-    );
+    return <StudentDashboard user={user} pageLoadTime={pageLoadTime} />;
   }
 
   // ---- Parent Dashboard ----
@@ -702,4 +678,307 @@ function timeAgo(dateStr: string): string {
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d ago`;
   return new Date(dateStr).toLocaleDateString();
+}
+
+// ---------------------------------------------------------------------------
+// Student Dashboard
+// ---------------------------------------------------------------------------
+
+function StudentDashboard({ user, pageLoadTime }: { user: { id: string; email: string; displayName: string | null; accountType: string; graduationYear: number | null; highSchool: string | null }; pageLoadTime: number }) {
+  const queryClient = useQueryClient();
+
+  // Fetch student's own applications
+  const { data: appsData, isLoading: appsLoading } = useQuery<{
+    applications: CollegeApplication[];
+  }>({
+    queryKey: ["my-applications"],
+    queryFn: async () => {
+      const res = await fetch("/api/applications");
+      if (!res.ok) return { applications: [] };
+      return res.json();
+    },
+  });
+
+  // Fetch student's favorites count
+  const { data: favoritesData } = useQuery<{ favorites: string[] }>({
+    queryKey: ["favorites"],
+    queryFn: async () => {
+      const res = await fetch("/api/favorites");
+      if (!res.ok) return { favorites: [] };
+      return res.json();
+    },
+  });
+
+  // Fetch pending suggestions
+  const { data: suggestionsData } = useQuery<{ received: CollegeSuggestion[] }>({
+    queryKey: ["family-suggestions"],
+    queryFn: async () => {
+      const res = await fetch("/api/family/suggestions");
+      if (!res.ok) return { received: [] };
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
+
+  // Fetch notifications
+  const { data: notificationsData } = useQuery<{
+    notifications: Notification[];
+    unreadCount: number;
+  }>({
+    queryKey: ["notifications"],
+    queryFn: async () => {
+      const res = await fetch("/api/notifications?limit=10");
+      if (!res.ok) return { notifications: [], unreadCount: 0 };
+      return res.json();
+    },
+    staleTime: 30_000,
+  });
+
+  const markAllRead = useMutation({
+    mutationFn: async () => {
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markAllRead: true }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+
+  const applications = appsData?.applications ?? [];
+  const favoriteCount = favoritesData?.favorites?.length ?? 0;
+  const pendingSuggestions = suggestionsData?.received ?? [];
+  const notifications = notificationsData?.notifications ?? [];
+  const unreadCount = notificationsData?.unreadCount ?? 0;
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="text-muted-foreground hover:text-foreground">
+              <FaIcon icon="arrow-left" style="solid" className="text-sm" />
+            </Link>
+            <h1 className="text-lg font-semibold">My Dashboard</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link href="/settings/profile">
+              <Button variant="outline" size="sm">
+                <FaIcon icon="gear" style="duotone" className="mr-1.5 text-xs" />
+                Settings
+              </Button>
+            </Link>
+            <Link href="/">
+              <Button size="sm">
+                <FaIcon icon="search" style="solid" className="mr-1.5 text-xs" />
+                Explore
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-5xl px-4 py-8">
+        {/* Overview cards */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+          <Card>
+            <CardContent className="flex items-center gap-3 py-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-50">
+                <FaIcon icon="heart" style="duotone" className="text-red-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{favoriteCount}</p>
+                <p className="text-xs text-muted-foreground">Favorites</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-3 py-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
+                <FaIcon icon="clipboard-list" style="duotone" className="text-blue-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{applications.length}</p>
+                <p className="text-xs text-muted-foreground">Applications</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-3 py-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50">
+                <FaIcon icon="lightbulb" style="duotone" className="text-amber-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{pendingSuggestions.length}</p>
+                <p className="text-xs text-muted-foreground">Suggestions</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-3 py-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-50">
+                <FaIcon icon="bell" style="duotone" className="text-purple-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{unreadCount}</p>
+                <p className="text-xs text-muted-foreground">Notifications</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Application progress */}
+        {applications.length > 0 && (
+          <ApplicationInsights applications={applications} now={pageLoadTime} />
+        )}
+
+        {/* Tabs */}
+        <Tabs defaultValue="applications">
+          <TabsList>
+            <TabsTrigger value="applications">
+              <FaIcon icon="clipboard-list" style="duotone" className="mr-1.5 text-xs" />
+              Applications ({applications.length})
+            </TabsTrigger>
+            <TabsTrigger value="notifications">
+              <FaIcon icon="bell" style="duotone" className="mr-1.5 text-xs" />
+              Notifications
+              {unreadCount > 0 && (
+                <Badge variant="secondary" className="ml-1.5 h-4 min-w-4 px-1 text-[9px]">
+                  {unreadCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="applications" className="mt-4">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                Track your application progress across colleges.
+              </p>
+              <a
+                href="/api/export?type=applications"
+                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <FaIcon icon="download" style="duotone" className="text-[10px]" />
+                Export CSV
+              </a>
+            </div>
+            {appsLoading ? (
+              <div className="py-8 text-center text-muted-foreground">
+                <FaIcon icon="spinner" style="duotone" className="fa-spin" />
+              </div>
+            ) : applications.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  <FaIcon icon="clipboard-list" style="duotone" className="mb-2 text-2xl text-gray-300" />
+                  <p className="text-sm">No applications tracked yet.</p>
+                  <p className="mt-1 text-xs">
+                    Visit a college page to start tracking your application.
+                  </p>
+                  <Link href="/">
+                    <Button className="mt-4" size="sm">
+                      <FaIcon icon="search" style="solid" className="mr-1.5 text-xs" />
+                      Explore Colleges
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-2">
+                {applications.map((app) => (
+                  <ApplicationRow key={app.id} app={app} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="notifications" className="mt-4">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                Recent notifications from your family.
+              </p>
+              {unreadCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => markAllRead.mutate()}
+                  disabled={markAllRead.isPending}
+                >
+                  Mark all read
+                </Button>
+              )}
+            </div>
+            {notifications.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  <FaIcon icon="bell" style="duotone" className="mb-2 text-2xl text-gray-300" />
+                  <p className="text-sm">No notifications yet.</p>
+                  <p className="mt-1 text-xs">
+                    You&apos;ll see updates here when family members interact with your college list.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-1">
+                {notifications.map((n) => (
+                  <NotificationRow key={n.id} notification={n} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Notification Row
+// ---------------------------------------------------------------------------
+
+const NOTIFICATION_ICONS: Record<string, { icon: string; color: string }> = {
+  invite_accepted: { icon: "user-check", color: "text-green-600" },
+  new_suggestion: { icon: "lightbulb", color: "text-amber-600" },
+  application_update: { icon: "clipboard-list", color: "text-blue-600" },
+  deadline_reminder: { icon: "calendar-clock", color: "text-red-600" },
+  family_note: { icon: "comment", color: "text-purple-600" },
+};
+
+function NotificationRow({ notification }: { notification: Notification }) {
+  const cfg = NOTIFICATION_ICONS[notification.type] || { icon: "bell", color: "text-gray-600" };
+
+  return (
+    <div className={cn(
+      "flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors",
+      notification.read ? "opacity-60" : "bg-blue-50/50",
+    )}>
+      <div className={cn("mt-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-gray-100", cfg.color)}>
+        <FaIcon icon={cfg.icon} style="duotone" className="text-xs" />
+      </div>
+      <div className="flex-1 min-w-0">
+        {notification.link ? (
+          <Link
+            href={notification.link}
+            className="text-sm font-medium text-foreground hover:text-primary block truncate"
+          >
+            {notification.title}
+          </Link>
+        ) : (
+          <p className="text-sm font-medium text-foreground truncate">{notification.title}</p>
+        )}
+        {notification.message && (
+          <p className="text-xs text-muted-foreground line-clamp-1">{notification.message}</p>
+        )}
+        <p className="text-[10px] text-muted-foreground mt-0.5">
+          {timeAgo(notification.createdAt)}
+        </p>
+      </div>
+      {!notification.read && (
+        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+      )}
+    </div>
+  );
 }

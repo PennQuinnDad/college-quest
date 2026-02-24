@@ -190,6 +190,114 @@ export async function POST(
 }
 
 /**
+ * PATCH /api/colleges/[collegeId]/notes
+ * Edit a note (only the author can edit their own notes).
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ collegeId: string }> },
+) {
+  try {
+    await params;
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { noteId, content, visibility } = await request.json();
+
+    if (!noteId) {
+      return NextResponse.json(
+        { error: "noteId is required" },
+        { status: 400 },
+      );
+    }
+
+    const updates: Record<string, unknown> = {};
+
+    if (content !== undefined) {
+      if (typeof content !== "string" || !content.trim()) {
+        return NextResponse.json(
+          { error: "Note content cannot be empty" },
+          { status: 400 },
+        );
+      }
+      if (content.length > 2000) {
+        return NextResponse.json(
+          { error: "Note must be 2000 characters or less" },
+          { status: 400 },
+        );
+      }
+      updates.content = content.trim();
+    }
+
+    if (visibility !== undefined) {
+      if (!["private", "family"].includes(visibility)) {
+        return NextResponse.json(
+          { error: "Visibility must be 'private' or 'family'" },
+          { status: 400 },
+        );
+      }
+      updates.visibility = visibility;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(
+        { error: "No fields to update" },
+        { status: 400 },
+      );
+    }
+
+    const service = createServiceClient();
+
+    const { data, error } = await service
+      .from("college_notes")
+      .update(updates)
+      .eq("id", noteId)
+      .eq("user_id", user.id)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return NextResponse.json(
+          { error: "Note not found or not owned by you" },
+          { status: 404 },
+        );
+      }
+      throw error;
+    }
+
+    const { data: profile } = await service
+      .from("profiles")
+      .select("display_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    return NextResponse.json({
+      id: data.id,
+      collegeId: data.college_id,
+      userId: data.user_id,
+      userName: profile?.display_name || null,
+      content: data.content,
+      visibility: data.visibility,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    });
+  } catch (error) {
+    console.error("Error updating note:", error);
+    return NextResponse.json(
+      { error: "Failed to update note" },
+      { status: 500 },
+    );
+  }
+}
+
+/**
  * DELETE /api/colleges/[collegeId]/notes
  * Delete a note (only the author can delete their own notes).
  */

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createNotification } from "@/lib/notifications";
 
 /**
  * GET /api/family/suggestions
@@ -171,6 +172,31 @@ export async function POST(request: NextRequest) {
       }
       throw error;
     }
+
+    // Notify the recipient about the new suggestion
+    const { data: fromProfile } = await service
+      .from("profiles")
+      .select("display_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const { data: college } = await service
+      .from("colleges")
+      .select("name")
+      .eq("id", collegeId)
+      .maybeSingle();
+
+    const fromName = fromProfile?.display_name || "A family member";
+    const collegeName = college?.name || "a college";
+    await createNotification(
+      toUserId,
+      "new_suggestion",
+      `${fromName} suggested ${collegeName}`,
+      {
+        message: note?.trim() || `Check out ${collegeName}!`,
+        link: `/college/${collegeId}`,
+      },
+    );
 
     return NextResponse.json({ id: data.id }, { status: 201 });
   } catch (error) {

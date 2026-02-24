@@ -848,8 +848,8 @@ function HomePageContent() {
               </a>
             )}
 
-            {/* Dashboard link (parent accounts) */}
-            {user?.accountType === "parent" && (
+            {/* Dashboard link (all authenticated users) */}
+            {user && (
               <a
                 href="/dashboard"
                 className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"

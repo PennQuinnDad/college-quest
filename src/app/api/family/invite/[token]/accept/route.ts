@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createNotification } from "@/lib/notifications";
 
 export async function POST(
   request: NextRequest,
@@ -93,6 +94,24 @@ export async function POST(
         claimed_by: user.id,
       })
       .eq("id", invite.id);
+
+    // Notify the inviter that their invite was accepted
+    const { data: accepterProfile } = await service
+      .from("profiles")
+      .select("display_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const accepterName = accepterProfile?.display_name || user.email || "Someone";
+    await createNotification(
+      invite.inviter_id,
+      "invite_accepted",
+      `${accepterName} accepted your family invite!`,
+      {
+        message: "You are now connected and can share college information.",
+        link: "/settings/family",
+      },
+    );
 
     return NextResponse.json({
       message: "Family link created successfully",
