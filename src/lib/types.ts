@@ -60,6 +60,43 @@ export interface UserProfile {
   email: string;
   displayName: string | null;
   role: string;
+  accountType: "student" | "parent";
+  graduationYear: number | null;
+  highSchool: string | null;
+  profileCompleted: boolean;
+  avatarUrl: string | null;
+}
+
+export interface FamilyLink {
+  id: string;
+  parentId: string;
+  studentId: string;
+  status: "pending" | "active" | "revoked";
+  createdAt: string;
+  acceptedAt: string | null;
+}
+
+export interface FamilyInvite {
+  id: string;
+  inviterId: string;
+  inviterType: "parent" | "student";
+  inviterName: string | null;
+  invitedEmail: string;
+  token: string;
+  expiresAt: string;
+  claimed: boolean;
+  createdAt: string;
+}
+
+export interface StudentSummary {
+  id: string;
+  displayName: string | null;
+  email: string;
+  graduationYear: number | null;
+  highSchool: string | null;
+  lastActiveAt: string | null;
+  favoriteCount: number;
+  folderCount: number;
 }
 
 export interface CollegeSearchParams {

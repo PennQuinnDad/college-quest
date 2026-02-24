@@ -30,6 +30,13 @@ const PROVIDERS: {
   className: string;
 }[] = [
   {
+    id: "google",
+    label: "Continue with Google",
+    faIcon: "google",
+    className:
+      "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-gray-400",
+  },
+  {
     id: "github",
     label: "Continue with GitHub",
     faIcon: "github",

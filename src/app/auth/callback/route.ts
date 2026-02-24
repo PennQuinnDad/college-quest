@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
         const service = createServiceClient();
         const { data: allowed } = await service
           .from("allowed_emails")
-          .select("id")
+          .select("id, suggested_account_type")
           .ilike("email", user.email)
           .limit(1);
 
@@ -36,6 +36,30 @@ export async function GET(request: NextRequest) {
           // Sign out unauthorized user
           await supabase.auth.signOut();
           return NextResponse.redirect(`${base}/login?error=unauthorized`);
+        }
+
+        // Eagerly create profile if it doesn't exist
+        const suggestedType = allowed[0]?.suggested_account_type || "student";
+        await service.from("profiles").upsert(
+          {
+            id: user.id,
+            email: user.email,
+            display_name: user.user_metadata?.full_name || null,
+            role: "user",
+            account_type: suggestedType,
+          },
+          { onConflict: "id", ignoreDuplicates: true },
+        );
+
+        // Redirect to onboarding if profile not yet completed
+        const { data: profile } = await service
+          .from("profiles")
+          .select("profile_completed")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (!profile?.profile_completed) {
+          return NextResponse.redirect(`${base}/onboarding`);
         }
       }
 

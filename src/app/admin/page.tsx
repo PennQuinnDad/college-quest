@@ -76,6 +76,18 @@ interface AllowedEmail {
   id: string;
   email: string;
   created_at: string;
+  suggested_account_type: "student" | "parent" | null;
+}
+
+interface ProfileInfo {
+  id: string;
+  email: string;
+  display_name: string | null;
+  role: string;
+  account_type: string;
+  graduation_year: number | null;
+  profile_completed: boolean;
+  last_active_at: string | null;
 }
 
 interface CollegeFormData {
@@ -1279,6 +1291,7 @@ function SchoolsTab() {
 function UsersTab() {
   const queryClient = useQueryClient();
   const [newEmail, setNewEmail] = useState("");
+  const [newAccountType, setNewAccountType] = useState<string>("");
   const [deleteConfirm, setDeleteConfirm] = useState<AllowedEmail | null>(null);
 
   const { data: emails = [], isLoading } = useQuery<AllowedEmail[]>({
@@ -1290,12 +1303,27 @@ function UsersTab() {
     },
   });
 
+  // Fetch profiles for enrichment
+  const { data: profiles = [] } = useQuery<ProfileInfo[]>({
+    queryKey: ["admin-profiles"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/profiles");
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  // Build a lookup by email
+  const profilesByEmail = new Map(
+    profiles.map((p) => [p.email?.toLowerCase(), p]),
+  );
+
   const addMutation = useMutation({
-    mutationFn: async (email: string) => {
+    mutationFn: async ({ email, suggestedAccountType }: { email: string; suggestedAccountType: string | null }) => {
       const res = await fetch("/api/admin/allowed-emails", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, suggestedAccountType: suggestedAccountType || null }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -1306,6 +1334,7 @@ function UsersTab() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-allowed-emails"] });
       setNewEmail("");
+      setNewAccountType("");
       toast({ title: "Email added" });
     },
     onError: (err: Error) => {
@@ -1337,7 +1366,7 @@ function UsersTab() {
       toast({ title: "Please enter a valid email address", variant: "destructive" });
       return;
     }
-    addMutation.mutate(email);
+    addMutation.mutate({ email, suggestedAccountType: newAccountType || null });
   }
 
   return (
@@ -1365,6 +1394,15 @@ function UsersTab() {
                 className="pl-10"
               />
             </div>
+            <Select value={newAccountType} onValueChange={setNewAccountType}>
+              <SelectTrigger className="w-[130px]">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="student">Student</SelectItem>
+                <SelectItem value="parent">Parent</SelectItem>
+              </SelectContent>
+            </Select>
             <Button
               className="bg-primary"
               onClick={handleAddEmail}
@@ -1392,38 +1430,63 @@ function UsersTab() {
             </div>
           ) : (
             <div className="space-y-2">
-              {emails.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="flex items-center justify-between rounded-lg border px-4 py-3 transition-colors hover:bg-gray-50/50"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100">
-                      <FaIcon icon="envelope" style="solid" className="text-xs text-amber-800" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{entry.email}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Added {new Date(entry.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setDeleteConfirm(entry)}
-                    className="text-destructive hover:text-destructive"
-                    title="Remove email"
+              {emails.map((entry) => {
+                const profile = profilesByEmail.get(entry.email.toLowerCase());
+                return (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between rounded-lg border px-4 py-3 transition-colors hover:bg-gray-50/50"
                   >
-                    <FaIcon icon="trash-can" style="solid" className="text-sm" />
-                  </Button>
-                </div>
-              ))}
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "flex h-8 w-8 items-center justify-center rounded-full",
+                        profile ? "bg-green-100" : "bg-amber-100",
+                      )}>
+                        <FaIcon
+                          icon={profile ? (profile.account_type === "parent" ? "users" : "graduation-cap") : "envelope"}
+                          style={profile ? "duotone" : "solid"}
+                          className={cn("text-xs", profile ? "text-green-700" : "text-amber-800")}
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium">{entry.email}</p>
+                          {profile && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                              {profile.account_type}
+                            </Badge>
+                          )}
+                          {!profile && entry.suggested_account_type && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                              {entry.suggested_account_type} (suggested)
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {profile
+                            ? `${profile.display_name || "No name"} · ${profile.profile_completed ? "Active" : "Onboarding pending"}${profile.graduation_year ? ` · Class of ${profile.graduation_year}` : ""}`
+                            : `Added ${new Date(entry.created_at).toLocaleDateString()} · Not yet signed in`}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setDeleteConfirm(entry)}
+                      className="text-destructive hover:text-destructive"
+                      title="Remove email"
+                    >
+                      <FaIcon icon="trash-can" style="solid" className="text-sm" />
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
           )}
 
           <p className="text-sm text-muted-foreground">
             {emails.length} email{emails.length !== 1 ? "s" : ""} authorized
+            {profiles.length > 0 && ` · ${profiles.length} signed in`}
           </p>
         </CardContent>
       </Card>

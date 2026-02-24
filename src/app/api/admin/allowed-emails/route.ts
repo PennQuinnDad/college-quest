@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const supabase = createServiceClient();
-    const { email } = await request.json();
+    const { email, suggestedAccountType } = await request.json();
 
     if (!email || !email.trim()) {
       return NextResponse.json(
@@ -40,9 +40,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const insertData: Record<string, unknown> = {
+      email: email.trim().toLowerCase(),
+    };
+    if (suggestedAccountType && ["student", "parent"].includes(suggestedAccountType)) {
+      insertData.suggested_account_type = suggestedAccountType;
+    }
+
     const { data, error } = await supabase
       .from("allowed_emails")
-      .insert({ email: email.trim().toLowerCase() })
+      .insert(insertData)
       .select()
       .single();
 
