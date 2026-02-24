@@ -3,15 +3,15 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { logActivity } from "@/lib/activity";
 
 /**
- * GET /api/colleges/[collegeId]/notes
+ * GET /api/colleges/[id]/notes
  * Returns the user's own notes + family notes from linked family members.
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ collegeId: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { collegeId } = await params;
+    const { id } = await params;
     const supabase = await createClient();
     const {
       data: { user },
@@ -27,7 +27,7 @@ export async function GET(
     const { data: ownNotes, error: ownError } = await service
       .from("college_notes")
       .select("id, college_id, user_id, content, visibility, created_at, updated_at")
-      .eq("college_id", collegeId)
+      .eq("college_id", id)
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
@@ -50,7 +50,7 @@ export async function GET(
       const { data, error } = await service
         .from("college_notes")
         .select("id, college_id, user_id, content, visibility, created_at, updated_at")
-        .eq("college_id", collegeId)
+        .eq("college_id", id)
         .in("user_id", familyIds)
         .eq("visibility", "family")
         .order("created_at", { ascending: false });
@@ -99,15 +99,15 @@ export async function GET(
 }
 
 /**
- * POST /api/colleges/[collegeId]/notes
+ * POST /api/colleges/[id]/notes
  * Create a note on a college.
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ collegeId: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { collegeId } = await params;
+    const { id } = await params;
     const supabase = await createClient();
     const {
       data: { user },
@@ -145,7 +145,7 @@ export async function POST(
     const { data, error } = await service
       .from("college_notes")
       .insert({
-        college_id: collegeId,
+        college_id: id,
         user_id: user.id,
         content: content.trim(),
         visibility,
@@ -163,7 +163,7 @@ export async function POST(
       .maybeSingle();
 
     await logActivity(user.id, "added_note", {
-      collegeId,
+      collegeId: id,
       visibility: visibility === "private" ? "private" : "family",
     });
 
@@ -190,12 +190,12 @@ export async function POST(
 }
 
 /**
- * PATCH /api/colleges/[collegeId]/notes
+ * PATCH /api/colleges/[id]/notes
  * Edit a note (only the author can edit their own notes).
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ collegeId: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     await params;
@@ -298,12 +298,12 @@ export async function PATCH(
 }
 
 /**
- * DELETE /api/colleges/[collegeId]/notes
+ * DELETE /api/colleges/[id]/notes
  * Delete a note (only the author can delete their own notes).
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ collegeId: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     await params; // consume params

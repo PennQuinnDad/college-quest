@@ -2,15 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 /**
- * GET /api/colleges/[collegeId]/family-status
+ * GET /api/colleges/[id]/family-status
  * Returns which family members have this college favorited.
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ collegeId: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { collegeId } = await params;
+    const { id } = await params;
     const supabase = await createClient();
     const {
       data: { user },
@@ -52,7 +52,7 @@ export async function GET(
     const { data: favs, error } = await service
       .from("favorites")
       .select("user_id")
-      .eq("college_id", collegeId)
+      .eq("college_id", id)
       .in("user_id", familyIds);
 
     if (error) throw error;
