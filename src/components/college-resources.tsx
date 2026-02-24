@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { safeHref } from "@/lib/utils";
 import { FaIcon } from "@/components/ui/fa-icon";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -275,7 +276,7 @@ export function CollegeResources({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start gap-2">
                       <a
-                        href={resource.url || "#"}
+                        href={safeHref(resource.url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm font-medium text-foreground underline-offset-4 hover:underline"

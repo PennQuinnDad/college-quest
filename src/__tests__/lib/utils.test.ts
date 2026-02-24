@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatCurrency, formatPercent, formatNumber, cn } from "@/lib/utils";
+import { formatCurrency, formatPercent, formatNumber, cn, sanitizeFilterValue, safeHref } from "@/lib/utils";
 
 describe("formatCurrency", () => {
   it("returns N/A for null", () => {
@@ -82,5 +82,73 @@ describe("cn", () => {
 
   it("handles empty input", () => {
     expect(cn()).toBe("");
+  });
+});
+
+describe("sanitizeFilterValue", () => {
+  it("strips commas", () => {
+    expect(sanitizeFilterValue("a,b")).toBe("ab");
+  });
+
+  it("strips dots", () => {
+    expect(sanitizeFilterValue("name.eq.1")).toBe("nameeq1");
+  });
+
+  it("strips parentheses", () => {
+    expect(sanitizeFilterValue("or(id)")).toBe("orid");
+  });
+
+  it("strips backslashes, percent, underscore, forward slash", () => {
+    expect(sanitizeFilterValue("a\\b%c_d/e")).toBe("abcde");
+  });
+
+  it("preserves normal alphanumeric and spaces", () => {
+    expect(sanitizeFilterValue("Harvard University")).toBe("Harvard University");
+  });
+
+  it("returns empty for all-special input", () => {
+    expect(sanitizeFilterValue(".,()\\/%_")).toBe("");
+  });
+});
+
+describe("safeHref", () => {
+  it("returns # for null", () => {
+    expect(safeHref(null)).toBe("#");
+  });
+
+  it("returns # for undefined", () => {
+    expect(safeHref(undefined)).toBe("#");
+  });
+
+  it("returns # for empty string", () => {
+    expect(safeHref("")).toBe("#");
+  });
+
+  it("passes through https URLs", () => {
+    expect(safeHref("https://example.com")).toBe("https://example.com");
+  });
+
+  it("passes through http URLs", () => {
+    expect(safeHref("http://example.com")).toBe("http://example.com");
+  });
+
+  it("adds https:// to bare domains", () => {
+    expect(safeHref("example.com")).toBe("https://example.com");
+  });
+
+  it("blocks javascript: URLs", () => {
+    expect(safeHref("javascript:alert(1)")).toBe("#");
+  });
+
+  it("blocks data: URLs", () => {
+    expect(safeHref("data:text/html,<script>alert(1)</script>")).toBe("#");
+  });
+
+  it("blocks vbscript: URLs", () => {
+    expect(safeHref("vbscript:MsgBox")).toBe("#");
+  });
+
+  it("trims whitespace", () => {
+    expect(safeHref("  https://example.com  ")).toBe("https://example.com");
   });
 });

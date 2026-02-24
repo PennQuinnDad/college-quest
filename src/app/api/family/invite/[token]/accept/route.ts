@@ -44,8 +44,8 @@ export async function POST(
     }
 
     // Verify the invite was sent to this user's email
-    if (invite.invitee_email && user.email) {
-      if (invite.invitee_email.toLowerCase() !== user.email.toLowerCase()) {
+    if (invite.invited_email && user.email) {
+      if (invite.invited_email.toLowerCase() !== user.email.toLowerCase()) {
         return NextResponse.json(
           { error: "This invite was sent to a different email address" },
           { status: 403 },

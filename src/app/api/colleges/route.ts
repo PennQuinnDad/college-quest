@@ -1,15 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-
-/**
- * Sanitize user input for use in PostgREST filter strings (.or(), .ilike(), etc.).
- * Strips characters that have special meaning in PostgREST filter syntax:
- * commas (value separator), dots (operator delimiter), parentheses (grouping),
- * backslashes, and percent/underscore (SQL wildcards injected outside the intended ones).
- */
-function sanitizeFilterValue(value: string): string {
-  return value.replace(/[,.()\\\/%_]/g, "");
-}
+import { sanitizeFilterValue } from "@/lib/utils";
 
 // ── Parsed filter parameters ──────────────────────────────────────────────────
 interface FilterParams {

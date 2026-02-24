@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { verifyAdmin } from "@/lib/admin-auth";
+import { sanitizeFilterValue } from "@/lib/utils";
 import { v4 as uuidv4 } from "uuid";
-
-/** Strip PostgREST-special characters to prevent filter injection. */
-function sanitizeFilterValue(value: string): string {
-  return value.replace(/[,.()\\\/%_]/g, "");
-}
 
 export async function GET(request: NextRequest) {
   const authError = await verifyAdmin();
@@ -17,8 +13,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
 
     const query = searchParams.get("query") || "";
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1") || 1);
+    const limit = Math.min(500, Math.max(1, parseInt(searchParams.get("limit") || "20") || 20));
     const sortBy = searchParams.get("sortBy") || "name";
     const sortOrder = searchParams.get("sortOrder") || "asc";
 
@@ -134,6 +130,13 @@ export async function DELETE(request: NextRequest) {
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json(
         { error: "ids array is required" },
+        { status: 400 }
+      );
+    }
+
+    if (ids.length > 100) {
+      return NextResponse.json(
+        { error: "Cannot delete more than 100 colleges at once" },
         { status: 400 }
       );
     }

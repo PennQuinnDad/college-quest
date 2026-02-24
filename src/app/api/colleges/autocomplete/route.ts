@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-
-/** Strip PostgREST-special characters to prevent filter injection. */
-function sanitizeFilterValue(value: string): string {
-  return value.replace(/[,.()\\\/%_]/g, "");
-}
+import { sanitizeFilterValue } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
   try {

@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { FaIcon } from "@/components/ui/fa-icon";
 import { CollegeActions } from "@/components/college-actions";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import { cn, formatCurrency, formatPercent } from "@/lib/utils";
+import { cn, formatCurrency, formatPercent, safeHref } from "@/lib/utils";
 import type { College, UserProfile } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -415,11 +415,7 @@ export const CollegeTable = memo(function CollegeTable({
                               />
                               {college.website && (
                                 <a
-                                  href={
-                                    college.website.startsWith("http")
-                                      ? college.website
-                                      : `https://${college.website}`
-                                  }
+                                  href={safeHref(college.website)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground hover:bg-gray-100"

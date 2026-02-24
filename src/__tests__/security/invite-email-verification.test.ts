@@ -47,7 +47,7 @@ describe("Invite accept - email verification", () => {
     });
   }
 
-  it("returns 403 when accepter email doesn't match invitee_email", async () => {
+  it("returns 403 when accepter email doesn't match invited_email", async () => {
     mockGetUser.mockResolvedValue({
       data: { user: { id: "user-2", email: "wrong@example.com" } },
     });
@@ -58,7 +58,7 @@ describe("Invite accept - email verification", () => {
           id: "inv-1",
           inviter_id: "user-1",
           inviter_type: "parent",
-          invitee_email: "correct@example.com",
+          invited_email: "correct@example.com",
           expires_at: "2030-01-01T00:00:00Z",
           claimed: false,
         },
@@ -87,7 +87,7 @@ describe("Invite accept - email verification", () => {
             id: "inv-1",
             inviter_id: "user-1",
             inviter_type: "parent",
-            invitee_email: "correct@example.com",
+            invited_email: "correct@example.com",
             expires_at: "2030-01-01T00:00:00Z",
             claimed: false,
           },
@@ -105,7 +105,7 @@ describe("Invite accept - email verification", () => {
     expect(body.message).toMatch(/success/i);
   });
 
-  it("allows accept when invitee_email is null (legacy invites)", async () => {
+  it("allows accept when invited_email is null (legacy invites)", async () => {
     mockGetUser.mockResolvedValue({
       data: { user: { id: "user-2", email: "anyone@example.com" } },
     });
@@ -119,7 +119,7 @@ describe("Invite accept - email verification", () => {
             id: "inv-1",
             inviter_id: "user-1",
             inviter_type: "parent",
-            invitee_email: null, // no email stored
+            invited_email: null, // no email stored
             expires_at: "2030-01-01T00:00:00Z",
             claimed: false,
           },
