@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@/hooks/use-user";
@@ -39,12 +39,14 @@ export default function ProfileSettingsPage() {
   const [initialized, setInitialized] = useState(false);
 
   // Populate form once when user data first becomes available
-  if (user && !initialized) {
-    setDisplayName(user.displayName || "");
-    setGraduationYear(user.graduationYear ? String(user.graduationYear) : "");
-    setHighSchool(user.highSchool || "");
-    setInitialized(true);
-  }
+  useEffect(() => {
+    if (user && !initialized) {
+      setDisplayName(user.displayName || "");
+      setGraduationYear(user.graduationYear ? String(user.graduationYear) : "");
+      setHighSchool(user.highSchool || "");
+      setInitialized(true);
+    }
+  }, [user, initialized]);
 
   const saveProfile = useMutation({
     mutationFn: async () => {
@@ -65,6 +67,7 @@ export default function ProfileSettingsPage() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Failed to save profile");
       }
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: "Profile saved!" });

@@ -51,3 +51,13 @@ export function safeHref(url: string | null | undefined): string {
   return `https://${trimmed}`;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Validates that a string is a valid UUID v4 format.
+ * Use this to validate user-supplied IDs before using them in queries.
+ */
+export function isValidUUID(value: string): boolean {
+  return UUID_RE.test(value);
+}
+

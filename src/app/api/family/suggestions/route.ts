@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { createNotification } from "@/lib/notifications";
+import { isValidUUID } from "@/lib/utils";
 
 /**
  * GET /api/family/suggestions
@@ -115,6 +116,13 @@ export async function POST(request: NextRequest) {
     if (!collegeId || !toUserId) {
       return NextResponse.json(
         { error: "collegeId and toUserId are required" },
+        { status: 400 },
+      );
+    }
+
+    if (!isValidUUID(collegeId) || !isValidUUID(toUserId)) {
+      return NextResponse.json(
+        { error: "Invalid collegeId or toUserId format" },
         { status: 400 },
       );
     }

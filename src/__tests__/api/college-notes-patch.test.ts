@@ -56,7 +56,7 @@ describe("PATCH /api/colleges/[collegeId]/notes", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    const mod = await import("@/app/api/colleges/[collegeId]/notes/route");
+    const mod = await import("@/app/api/colleges/[id]/notes/route");
     PATCH = mod.PATCH;
   });
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { isValidUUID } from "@/lib/utils";
 
 /**
  * GET /api/family/activity?studentId=...&limit=...
@@ -23,6 +24,10 @@ export async function GET(request: NextRequest) {
 
     const service = createServiceClient();
     let targetUserId = user.id;
+
+    if (studentId && !isValidUUID(studentId)) {
+      return NextResponse.json({ error: "Invalid studentId" }, { status: 400 });
+    }
 
     // If requesting another user's activity, verify family link
     if (studentId && studentId !== user.id) {

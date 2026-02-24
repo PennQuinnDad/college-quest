@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     // Also get unread count
-    const { data: countData } = await service
+    const { count: unreadCount } = await service
       .from("notifications")
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id)
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       notifications,
-      unreadCount: countData?.length ?? 0,
+      unreadCount: unreadCount ?? 0,
     });
   } catch (error) {
     console.error("Error fetching notifications:", error);

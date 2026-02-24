@@ -55,7 +55,7 @@ describe("POST /api/colleges/[collegeId]/notes", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    const mod = await import("@/app/api/colleges/[collegeId]/notes/route");
+    const mod = await import("@/app/api/colleges/[id]/notes/route");
     POST = mod.POST;
   });
 
@@ -140,7 +140,7 @@ describe("DELETE /api/colleges/[collegeId]/notes", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    const mod = await import("@/app/api/colleges/[collegeId]/notes/route");
+    const mod = await import("@/app/api/colleges/[id]/notes/route");
     DELETE = mod.DELETE;
   });
 

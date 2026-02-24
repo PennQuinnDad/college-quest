@@ -49,7 +49,7 @@ describe("GET /api/colleges/[collegeId]/family-status", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     const mod = await import(
-      "@/app/api/colleges/[collegeId]/family-status/route"
+      "@/app/api/colleges/[id]/family-status/route"
     );
     GET = mod.GET;
   });

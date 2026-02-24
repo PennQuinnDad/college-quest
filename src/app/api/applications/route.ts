@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { logActivity } from "@/lib/activity";
+import { isValidUUID } from "@/lib/utils";
 
 const VALID_STATUSES = [
   "researching", "applying", "applied",
@@ -31,6 +32,10 @@ export async function GET(request: NextRequest) {
     const service = createServiceClient();
     let targetUserId = user.id;
     let familyView = false;
+
+    if (studentId && !isValidUUID(studentId)) {
+      return NextResponse.json({ error: "Invalid studentId" }, { status: 400 });
+    }
 
     if (studentId && studentId !== user.id) {
       // Verify family link exists
