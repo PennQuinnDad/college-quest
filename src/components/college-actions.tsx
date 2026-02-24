@@ -9,6 +9,7 @@ import {
   useFolderMemberships,
   useToggleFolderItem,
   useCreateFolder,
+  useToggleFolderSharing,
 } from "@/hooks/use-folders";
 
 interface CollegeActionsProps {
@@ -36,6 +37,7 @@ export const CollegeActions = memo(function CollegeActions({
   const { data: memberships } = useFolderMemberships(user, folders);
   const toggleFolderItem = useToggleFolderItem();
   const createFolder = useCreateFolder();
+  const toggleSharing = useToggleFolderSharing();
 
   // Click-outside & Escape to close
   const closeDropdown = useCallback(() => {
@@ -110,21 +112,45 @@ export const CollegeActions = memo(function CollegeActions({
             {folders.map((folder) => {
               const isInFolder = collegeFolders.has(folder.id);
               return (
-                <button
+                <div
                   key={folder.id}
-                  onClick={() => handleToggleFolder(folder.id)}
-                  className="flex w-full items-center gap-2.5 px-3 py-1.5 text-sm transition-colors hover:bg-gray-50"
+                  className="flex items-center justify-between px-3 py-1.5 text-sm transition-colors hover:bg-gray-50"
                 >
-                  <FaIcon
-                    icon={isInFolder ? "square-check" : "square"}
-                    style={isInFolder ? "solid" : "regular"}
-                    className={cn(
-                      "text-sm",
-                      isInFolder ? "text-primary" : "text-muted-foreground"
-                    )}
-                  />
-                  <span className="truncate">{folder.name}</span>
-                </button>
+                  <button
+                    onClick={() => handleToggleFolder(folder.id)}
+                    className="flex flex-1 items-center gap-2.5 min-w-0"
+                  >
+                    <FaIcon
+                      icon={isInFolder ? "square-check" : "square"}
+                      style={isInFolder ? "solid" : "regular"}
+                      className={cn(
+                        "text-sm shrink-0",
+                        isInFolder ? "text-primary" : "text-muted-foreground"
+                      )}
+                    />
+                    <span className="truncate">{folder.name}</span>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSharing.mutate({
+                        folderId: folder.id,
+                        shared: !folder.sharedWithFamily,
+                      });
+                    }}
+                    className="ml-1 shrink-0 rounded p-0.5 transition-colors hover:bg-gray-200"
+                    title={folder.sharedWithFamily ? "Shared with family" : "Share with family"}
+                  >
+                    <FaIcon
+                      icon={folder.sharedWithFamily ? "users" : "user-lock"}
+                      style="duotone"
+                      className={cn(
+                        "text-[10px]",
+                        folder.sharedWithFamily ? "text-blue-500" : "text-gray-400"
+                      )}
+                    />
+                  </button>
+                </div>
               );
             })}
           </div>

@@ -42,6 +42,7 @@ const CollegeMapView = dynamic(() => import("@/components/college-map-view"), {
 import { cn, formatCurrency, formatPercent, formatNumber } from "@/lib/utils";
 import type {
   College,
+  CollegeSuggestion,
   ViewMode,
   CollegeSearchParams,
   SavedFilter,
@@ -228,6 +229,34 @@ function HomePageContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["favorites"] });
+    },
+  });
+
+  // ---- Family suggestions (for students) ----
+  const { data: suggestionsData } = useQuery<{ received: CollegeSuggestion[] }>({
+    queryKey: ["family-suggestions"],
+    queryFn: async () => {
+      const res = await fetch("/api/family/suggestions");
+      if (!res.ok) return { received: [] };
+      return res.json();
+    },
+    enabled: !!user && user.accountType === "student",
+    staleTime: 60_000,
+  });
+
+  const pendingSuggestions = suggestionsData?.received ?? [];
+
+  const respondSuggestion = useMutation({
+    mutationFn: async ({ suggestionId, action }: { suggestionId: string; action: "accepted" | "dismissed" }) => {
+      const res = await fetch("/api/family/suggestions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ suggestionId, action }),
+      });
+      if (!res.ok) throw new Error("Failed to respond");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["family-suggestions"] });
     },
   });
 
@@ -869,6 +898,88 @@ function HomePageContent() {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        {/* ================================================================ */}
+        {/* SUGGESTIONS BANNER (students only)                                */}
+        {/* ================================================================ */}
+        {pendingSuggestions.length > 0 && (
+          <Card className="mb-6 border-blue-200 bg-blue-50/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold text-blue-800">
+                <FaIcon icon="lightbulb" style="duotone" className="text-blue-600" />
+                College Suggestions from Family
+                <Badge variant="secondary" className="ml-1 bg-blue-100 text-blue-700 text-[10px]">
+                  {pendingSuggestions.length}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 pt-0">
+              {pendingSuggestions.slice(0, 3).map((s) => (
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between rounded-lg border border-blue-100 bg-white p-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <a
+                      href={`/college/${s.collegeId}`}
+                      className="text-sm font-medium text-primary hover:underline"
+                    >
+                      {s.collegeName || "Unknown College"}
+                    </a>
+                    <p className="text-xs text-muted-foreground">
+                      {s.collegeCity && s.collegeState
+                        ? `${s.collegeCity}, ${s.collegeState} · `
+                        : ""}
+                      Suggested by {s.fromUserName || "a family member"}
+                    </p>
+                    {s.note && (
+                      <p className="mt-0.5 text-xs text-foreground/70 italic line-clamp-1">
+                        &ldquo;{s.note}&rdquo;
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 ml-3 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 gap-1 text-xs border-green-200 text-green-700 hover:bg-green-50"
+                      onClick={() =>
+                        respondSuggestion.mutate({
+                          suggestionId: s.id,
+                          action: "accepted",
+                        })
+                      }
+                      disabled={respondSuggestion.isPending}
+                    >
+                      <FaIcon icon="check" className="text-[10px]" />
+                      Accept
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 gap-1 text-xs text-muted-foreground"
+                      onClick={() =>
+                        respondSuggestion.mutate({
+                          suggestionId: s.id,
+                          action: "dismissed",
+                        })
+                      }
+                      disabled={respondSuggestion.isPending}
+                    >
+                      <FaIcon icon="xmark" className="text-[10px]" />
+                      Dismiss
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              {pendingSuggestions.length > 3 && (
+                <p className="text-center text-xs text-blue-600">
+                  +{pendingSuggestions.length - 3} more suggestion{pendingSuggestions.length - 3 > 1 ? "s" : ""}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* ================================================================ */}
         {/* SEARCH BAR                                                       */}
         {/* ================================================================ */}

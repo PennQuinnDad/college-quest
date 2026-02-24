@@ -11,6 +11,7 @@ vi.mock("@/hooks/use-folders", () => ({
   useFolderMemberships: () => ({ data: new Map() }),
   useToggleFolderItem: () => ({ mutate: vi.fn() }),
   useCreateFolder: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }),
+  useToggleFolderSharing: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 function Wrapper({ children }: { children: React.ReactNode }) {

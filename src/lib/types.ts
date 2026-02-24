@@ -176,3 +176,17 @@ export interface SavedFilter {
   name: string;
   params: CollegeSearchParams;
 }
+
+export interface CollegeSuggestion {
+  id: string;
+  collegeId: string;
+  collegeName: string | null;
+  collegeCity: string | null;
+  collegeState: string | null;
+  fromUserId: string;
+  fromUserName: string | null;
+  toUserId: string;
+  note: string | null;
+  status: "pending" | "accepted" | "dismissed";
+  createdAt: string;
+}

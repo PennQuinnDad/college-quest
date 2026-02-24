@@ -22,6 +22,7 @@ vi.mock("@/hooks/use-folders", () => ({
     mutateAsync: mockCreateMutateAsync,
     isPending: false,
   }),
+  useToggleFolderSharing: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 function Wrapper({ children }: { children: React.ReactNode }) {

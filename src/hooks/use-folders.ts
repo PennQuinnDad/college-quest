@@ -77,6 +77,23 @@ export function useToggleFolderItem() {
   });
 }
 
+export function useToggleFolderSharing() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ folderId, shared }: { folderId: string; shared: boolean }) => {
+      const res = await fetch(`/api/folders/${folderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sharedWithFamily: shared }),
+      });
+      if (!res.ok) throw new Error("Failed to update sharing");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["folders"] });
+    },
+  });
+}
+
 export function useCreateFolder() {
   const queryClient = useQueryClient();
   return useMutation({

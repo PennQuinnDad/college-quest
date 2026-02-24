@@ -31,12 +31,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { CollegeActions } from "@/components/college-actions";
 import { CollegeResources } from "@/components/college-resources";
+import { CollegeNotes } from "@/components/college-notes";
 import { toast } from "@/components/ui/toaster";
 import { cn, formatCurrency, formatPercent, formatNumber } from "@/lib/utils";
-import type { College, School } from "@/lib/types";
+import type { College, School, StudentSummary } from "@/lib/types";
 
 const CollegeMap = dynamic(() => import("@/components/college-map"), {
   ssr: false,
@@ -177,6 +179,8 @@ export default function CollegeDetailPage({
   const [editOpen, setEditOpen] = useState(false);
   const [form, setForm] = useState<CollegeFormData>(EMPTY_FORM);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [suggestDialogOpen, setSuggestDialogOpen] = useState(false);
+  const [suggestNote, setSuggestNote] = useState("");
 
   // ---- Data fetching ----
 
@@ -209,6 +213,57 @@ export default function CollegeDetailPage({
   });
 
   const isFavorite = favoriteData?.isFavorite ?? false;
+
+  // Family favorites — which family members also favorited this college
+  const { data: familyStatusData } = useQuery<{
+    familyFavorites: { id: string; displayName: string | null; accountType: string }[];
+  }>({
+    queryKey: ["family-status", id],
+    queryFn: async () => {
+      const res = await fetch(`/api/colleges/${id}/family-status`);
+      if (!res.ok) return { familyFavorites: [] };
+      return res.json();
+    },
+    enabled: !!user,
+  });
+  const familyFavorites = familyStatusData?.familyFavorites ?? [];
+
+  // Linked students (for suggest feature — parent only)
+  const isParent = user?.accountType === "parent";
+  const { data: studentsData } = useQuery<{ students: StudentSummary[] }>({
+    queryKey: ["family-students"],
+    queryFn: async () => {
+      const res = await fetch("/api/family/students");
+      if (!res.ok) return { students: [] };
+      return res.json();
+    },
+    enabled: !!user && isParent,
+    staleTime: 5 * 60 * 1000,
+  });
+  const linkedStudents = studentsData?.students ?? [];
+
+  const suggestMutation = useMutation({
+    mutationFn: async ({ toUserId, note }: { toUserId: string; note: string }) => {
+      const res = await fetch("/api/family/suggestions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ collegeId: id, toUserId, note: note || null }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to send suggestion");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Suggestion sent!" });
+      setSuggestDialogOpen(false);
+      setSuggestNote("");
+    },
+    onError: (err: Error) => {
+      toast({ title: err.message, variant: "destructive" });
+    },
+  });
 
   // Fetch schools/programs for this college
   const { data: schools = [] } = useQuery<School[]>({
@@ -566,6 +621,69 @@ export default function CollegeDetailPage({
               Edit
             </Button>
           )}
+
+          {/* Suggest to student (parent only) */}
+          {isParent && linkedStudents.length > 0 && (
+            <Dialog open={suggestDialogOpen} onOpenChange={setSuggestDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5 border-blue-200 text-blue-700 hover:bg-blue-50">
+                  <FaIcon icon="lightbulb" style="duotone" className="text-sm" />
+                  Suggest
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Suggest This College</DialogTitle>
+                  <DialogDescription>
+                    Send a suggestion to your student to check out {college?.name}.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3 py-2">
+                  <textarea
+                    value={suggestNote}
+                    onChange={(e) => setSuggestNote(e.target.value)}
+                    placeholder="Add a note (optional)..."
+                    className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                    maxLength={500}
+                  />
+                  <p className="text-[10px] text-muted-foreground text-right">
+                    {suggestNote.length}/500
+                  </p>
+                </div>
+                <DialogFooter>
+                  {linkedStudents.map((student) => (
+                    <Button
+                      key={student.id}
+                      onClick={() =>
+                        suggestMutation.mutate({
+                          toUserId: student.id,
+                          note: suggestNote,
+                        })
+                      }
+                      disabled={suggestMutation.isPending}
+                      className="gap-1.5"
+                    >
+                      <FaIcon icon="paper-plane" style="solid" className="text-xs" />
+                      Send to {student.displayName || student.email}
+                    </Button>
+                  ))}
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {/* Family favorites indicator */}
+          {familyFavorites.length > 0 && (
+            <div className="flex items-center gap-1.5 rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs text-blue-700">
+              <FaIcon icon="heart" style="solid" className="text-[10px] text-blue-400" />
+              <span>
+                Also favorited by{" "}
+                {familyFavorites
+                  .map((f) => f.displayName || (f.accountType === "parent" ? "Parent" : "Student"))
+                  .join(", ")}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* ================================================================ */}
@@ -785,6 +903,8 @@ export default function CollegeDetailPage({
             {/* Resources */}
             <CollegeResources collegeId={id} isAdmin={user?.role === "admin"} />
 
+            {/* Notes */}
+            {user && <CollegeNotes collegeId={id} user={user} />}
           </div>
         </div>
       </div>
