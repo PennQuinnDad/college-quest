@@ -177,6 +177,62 @@ export interface SavedFilter {
   params: CollegeSearchParams;
 }
 
+export type ApplicationStatus =
+  | "researching"
+  | "applying"
+  | "applied"
+  | "accepted"
+  | "rejected"
+  | "waitlisted"
+  | "deferred"
+  | "enrolled"
+  | "withdrawn";
+
+export type ApplicationType =
+  | "early_decision"
+  | "early_action"
+  | "regular"
+  | "rolling";
+
+export interface CollegeApplication {
+  id: string;
+  userId: string;
+  collegeId: string;
+  collegeName: string | null;
+  collegeCity: string | null;
+  collegeState: string | null;
+  status: ApplicationStatus;
+  applicationType: ApplicationType | null;
+  deadline: string | null;
+  submittedAt: string | null;
+  decisionAt: string | null;
+  notes: string | null;
+  sharedWithFamily: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ActivityAction =
+  | "favorited_college"
+  | "unfavorited_college"
+  | "added_note"
+  | "updated_application"
+  | "added_to_folder"
+  | "created_folder"
+  | "accepted_suggestion";
+
+export interface ActivityEvent {
+  id: string;
+  userId: string;
+  userName: string | null;
+  action: ActivityAction;
+  collegeId: string | null;
+  collegeName: string | null;
+  metadata: Record<string, unknown>;
+  visibility: "family" | "private";
+  createdAt: string;
+}
+
 export interface CollegeSuggestion {
   id: string;
   collegeId: string;

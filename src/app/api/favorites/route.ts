@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { logActivity } from "@/lib/activity";
 
 export async function GET() {
   try {
@@ -81,6 +82,8 @@ export async function POST(request: NextRequest) {
       }
       throw error;
     }
+
+    await logActivity(user.id, "favorited_college", { collegeId });
 
     return NextResponse.json({ message: "Favorite added" }, { status: 201 });
   } catch (error) {

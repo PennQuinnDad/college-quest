@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { logActivity } from "@/lib/activity";
 
 export async function GET(
   _request: NextRequest,
@@ -59,6 +60,8 @@ export async function DELETE(
       .eq("college_id", collegeId);
 
     if (error) throw error;
+
+    await logActivity(user.id, "unfavorited_college", { collegeId });
 
     return NextResponse.json({ message: "Favorite removed" });
   } catch (error) {

@@ -160,6 +160,32 @@ export default function FamilySettingsPage() {
     },
   });
 
+  // ---- Re-invite mutation (delete expired + send new) ----
+  const reInvite = useMutation({
+    mutationFn: async ({ inviteId, email }: { inviteId: string; email: string }) => {
+      // Delete the expired invite
+      await fetch(`/api/family/invites?id=${inviteId}`, { method: "DELETE" });
+      // Create a new one
+      const res = await fetch("/api/family/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to re-invite");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "New invite sent!" });
+      queryClient.invalidateQueries({ queryKey: ["family-invites"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: err.message, variant: "destructive" });
+    },
+  });
+
   function handleSendInvite() {
     const email = inviteEmail.trim().toLowerCase();
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -174,6 +200,7 @@ export default function FamilySettingsPage() {
   const sentInvites = invitesData?.sent ?? [];
   const receivedInvites = invitesData?.received ?? [];
   const pendingSent = sentInvites.filter((i) => !i.claimed && new Date(i.expiresAt) > new Date());
+  const expiredSent = sentInvites.filter((i) => !i.claimed && new Date(i.expiresAt) <= new Date());
   const isParent = user?.accountType === "parent";
   const isStudent = user?.accountType === "student";
   const isLoading = userLoading || membersLoading || invitesLoading;
@@ -480,6 +507,47 @@ export default function FamilySettingsPage() {
                       <FaIcon icon="hourglass-half" style="duotone" className="mr-1 text-[10px]" />
                       Pending
                     </Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
+        {/* ─── Expired Invites (re-invite option) ─── */}
+        {expiredSent.length > 0 && (
+          <section>
+            <h2 className="mb-4 text-base font-semibold text-foreground">
+              <FaIcon icon="clock-rotate-left" style="duotone" className="mr-2 text-muted-foreground" />
+              Expired Invites
+            </h2>
+            <div className="space-y-2">
+              {expiredSent.map((invite) => (
+                <Card key={invite.id} className="border-dashed">
+                  <CardContent className="flex items-center justify-between py-3">
+                    <div>
+                      <p className="text-sm text-muted-foreground">{invite.invitedEmail}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Expired {new Date(invite.expiresAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        reInvite.mutate({
+                          inviteId: invite.id,
+                          email: invite.invitedEmail,
+                        })
+                      }
+                      disabled={reInvite.isPending}
+                    >
+                      {reInvite.isPending ? (
+                        <FaIcon icon="spinner" style="duotone" className="mr-1.5 text-xs fa-spin" />
+                      ) : (
+                        <FaIcon icon="rotate-right" style="solid" className="mr-1.5 text-xs" />
+                      )}
+                      Re-invite
+                    </Button>
                   </CardContent>
                 </Card>
               ))}

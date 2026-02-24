@@ -837,6 +837,17 @@ function HomePageContent() {
               </div>
             )}
 
+            {/* Compare link */}
+            {user && favoriteIds.size >= 2 && (
+              <a
+                href="/compare"
+                className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <FaIcon icon="scale-balanced" style="duotone" className="text-sm" />
+                <span className="hidden sm:inline">Compare</span>
+              </a>
+            )}
+
             {/* Dashboard link (parent accounts) */}
             {user?.accountType === "parent" && (
               <a
@@ -848,14 +859,19 @@ function HomePageContent() {
               </a>
             )}
 
-            {/* Family settings link */}
+            {/* Family settings link with notification badge */}
             {user && (
               <a
                 href="/settings/family"
-                className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                className="relative inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
                 <FaIcon icon="users" style="duotone" className="text-sm" />
                 <span className="hidden sm:inline">Family</span>
+                {pendingSuggestions.length > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                    {pendingSuggestions.length}
+                  </span>
+                )}
               </a>
             )}
 

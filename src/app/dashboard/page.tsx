@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn, formatPercent, formatCurrency } from "@/lib/utils";
-import type { StudentSummary } from "@/lib/types";
+import type { StudentSummary, ActivityEvent, CollegeApplication, ApplicationStatus } from "@/lib/types";
 
 interface StudentFavoriteCollege {
   id: string;
@@ -39,6 +39,7 @@ interface StudentFolder {
 export default function DashboardPage() {
   const { data: user, isLoading: userLoading } = useUser();
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [pageLoadTime] = useState(() => Date.now());
 
   const isParent = user?.accountType === "parent";
 
@@ -86,8 +87,36 @@ export default function DashboardPage() {
     enabled: !!activeStudent,
   });
 
+  // ---- Fetch selected student's activity ----
+  const { data: activityData, isLoading: activityLoading } = useQuery<{
+    events: ActivityEvent[];
+  }>({
+    queryKey: ["student-activity", activeStudent?.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/family/activity?studentId=${activeStudent!.id}&limit=20`);
+      if (!res.ok) return { events: [] };
+      return res.json();
+    },
+    enabled: !!activeStudent,
+  });
+
+  // ---- Fetch selected student's applications ----
+  const { data: appsData, isLoading: appsLoading } = useQuery<{
+    applications: CollegeApplication[];
+  }>({
+    queryKey: ["student-applications", activeStudent?.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/applications?studentId=${activeStudent!.id}`);
+      if (!res.ok) return { applications: [] };
+      return res.json();
+    },
+    enabled: !!activeStudent,
+  });
+
   const favorites = favsData?.colleges ?? [];
   const folders = foldersData?.folders ?? [];
+  const activity = activityData?.events ?? [];
+  const applications = appsData?.applications ?? [];
 
   // ---- Loading ----
   if (userLoading) {
@@ -266,20 +295,37 @@ export default function DashboardPage() {
                         <p className="text-2xl font-bold text-primary">{activeStudent.folderCount}</p>
                         <p className="text-xs text-muted-foreground">Folders</p>
                       </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-primary">{applications.length}</p>
+                        <p className="text-xs text-muted-foreground">Applications</p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* ─── Tabs: Favorites & Folders ─── */}
+                {/* ─── Application Progress Insights ─── */}
+                {applications.length > 0 && (
+                  <ApplicationInsights applications={applications} now={pageLoadTime} />
+                )}
+
+                {/* ─── Tabs: Favorites, Applications, Folders, Activity ─── */}
                 <Tabs defaultValue="favorites">
                   <TabsList>
                     <TabsTrigger value="favorites">
                       <FaIcon icon="heart" style="duotone" className="mr-1.5 text-xs" />
                       Favorites ({favorites.length})
                     </TabsTrigger>
+                    <TabsTrigger value="applications">
+                      <FaIcon icon="clipboard-list" style="duotone" className="mr-1.5 text-xs" />
+                      Applications ({applications.length})
+                    </TabsTrigger>
                     <TabsTrigger value="folders">
                       <FaIcon icon="folder" style="duotone" className="mr-1.5 text-xs" />
-                      Shared Folders ({folders.length})
+                      Folders ({folders.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="activity">
+                      <FaIcon icon="clock-rotate-left" style="duotone" className="mr-1.5 text-xs" />
+                      Activity
                     </TabsTrigger>
                   </TabsList>
 
@@ -335,6 +381,30 @@ export default function DashboardPage() {
                     )}
                   </TabsContent>
 
+                  <TabsContent value="applications" className="mt-4">
+                    {appsLoading ? (
+                      <div className="py-8 text-center text-muted-foreground">
+                        <FaIcon icon="spinner" style="duotone" className="fa-spin" />
+                      </div>
+                    ) : applications.length === 0 ? (
+                      <Card>
+                        <CardContent className="py-8 text-center text-muted-foreground">
+                          <FaIcon icon="clipboard-list" style="duotone" className="mb-2 text-2xl text-gray-300" />
+                          <p className="text-sm">No applications tracked yet.</p>
+                          <p className="mt-1 text-xs">
+                            Your student can track applications from any college detail page.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <div className="space-y-2">
+                        {applications.map((app) => (
+                          <ApplicationRow key={app.id} app={app} />
+                        ))}
+                      </div>
+                    )}
+                  </TabsContent>
+
                   <TabsContent value="folders" className="mt-4">
                     {foldersLoading ? (
                       <div className="py-8 text-center text-muted-foreground">
@@ -374,12 +444,250 @@ export default function DashboardPage() {
                       </div>
                     )}
                   </TabsContent>
+                  <TabsContent value="activity" className="mt-4">
+                    {activityLoading ? (
+                      <div className="py-8 text-center text-muted-foreground">
+                        <FaIcon icon="spinner" style="duotone" className="fa-spin" />
+                      </div>
+                    ) : activity.length === 0 ? (
+                      <Card>
+                        <CardContent className="py-8 text-center text-muted-foreground">
+                          <FaIcon icon="clock-rotate-left" style="duotone" className="mb-2 text-2xl text-gray-300" />
+                          <p className="text-sm">No recent activity.</p>
+                          <p className="mt-1 text-xs">
+                            Activity will appear here as your student explores colleges.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <div className="space-y-1">
+                        {activity.map((event) => (
+                          <ActivityRow key={event.id} event={event} />
+                        ))}
+                      </div>
+                    )}
+                  </TabsContent>
                 </Tabs>
               </>
             )}
           </>
         )}
       </main>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Application Insights Card
+// ---------------------------------------------------------------------------
+
+const STATUS_COLORS: Record<ApplicationStatus, string> = {
+  researching: "bg-gray-200",
+  applying: "bg-blue-400",
+  applied: "bg-indigo-500",
+  accepted: "bg-green-500",
+  rejected: "bg-red-400",
+  waitlisted: "bg-amber-400",
+  deferred: "bg-orange-400",
+  enrolled: "bg-emerald-600",
+  withdrawn: "bg-gray-300",
+};
+
+const STATUS_LABELS: Record<ApplicationStatus, string> = {
+  researching: "Researching",
+  applying: "Applying",
+  applied: "Applied",
+  accepted: "Accepted",
+  rejected: "Rejected",
+  waitlisted: "Waitlisted",
+  deferred: "Deferred",
+  enrolled: "Enrolled",
+  withdrawn: "Withdrawn",
+};
+
+function ApplicationInsights({ applications, now }: { applications: CollegeApplication[]; now: number }) {
+
+  const counts: Partial<Record<ApplicationStatus, number>> = {};
+  for (const app of applications) {
+    counts[app.status] = (counts[app.status] || 0) + 1;
+  }
+
+  const upcoming = applications
+    .filter((a) => a.deadline && new Date(a.deadline).getTime() > now && !["accepted", "rejected", "enrolled", "withdrawn"].includes(a.status))
+    .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())
+    .slice(0, 3);
+
+  return (
+    <Card className="mb-6">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <FaIcon icon="chart-simple" style="duotone" className="text-primary" />
+          Application Progress
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Status bar */}
+        <div className="flex h-3 overflow-hidden rounded-full bg-gray-100">
+          {(Object.entries(counts) as [ApplicationStatus, number][]).map(([status, count]) => (
+            <div
+              key={status}
+              className={cn("transition-all", STATUS_COLORS[status])}
+              style={{ width: `${(count / applications.length) * 100}%` }}
+              title={`${STATUS_LABELS[status]}: ${count}`}
+            />
+          ))}
+        </div>
+
+        {/* Legend */}
+        <div className="flex flex-wrap gap-3">
+          {(Object.entries(counts) as [ApplicationStatus, number][]).map(([status, count]) => (
+            <span key={status} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className={cn("h-2 w-2 rounded-full", STATUS_COLORS[status])} />
+              {STATUS_LABELS[status]} ({count})
+            </span>
+          ))}
+        </div>
+
+        {/* Upcoming deadlines */}
+        {upcoming.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-1.5">
+              <FaIcon icon="calendar-clock" style="duotone" className="mr-1 text-[10px]" />
+              Upcoming Deadlines
+            </p>
+            <div className="space-y-1">
+              {upcoming.map((app) => {
+                const daysUntil = Math.ceil(
+                  (new Date(app.deadline!).getTime() - now) / 86_400_000,
+                );
+                return (
+                  <div key={app.id} className="flex items-center justify-between text-xs">
+                    <Link
+                      href={`/college/${app.collegeId}`}
+                      className="text-primary hover:underline truncate"
+                    >
+                      {app.collegeName || "Unknown College"}
+                    </Link>
+                    <span className={cn(
+                      "shrink-0 ml-2",
+                      daysUntil <= 7 ? "text-red-600 font-medium" : "text-muted-foreground",
+                    )}>
+                      {daysUntil === 0 ? "Today" : daysUntil === 1 ? "Tomorrow" : `${daysUntil} days`}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Application Row
+// ---------------------------------------------------------------------------
+
+function ApplicationRow({ app }: { app: CollegeApplication }) {
+  const statusCfg: Record<ApplicationStatus, { icon: string; color: string }> = {
+    researching: { icon: "magnifying-glass", color: "text-gray-500" },
+    applying: { icon: "pen-to-square", color: "text-blue-600" },
+    applied: { icon: "paper-plane", color: "text-indigo-600" },
+    accepted: { icon: "circle-check", color: "text-green-600" },
+    rejected: { icon: "circle-xmark", color: "text-red-600" },
+    waitlisted: { icon: "clock", color: "text-amber-600" },
+    deferred: { icon: "hourglass-half", color: "text-orange-600" },
+    enrolled: { icon: "graduation-cap", color: "text-emerald-700" },
+    withdrawn: { icon: "arrow-right-from-bracket", color: "text-gray-400" },
+  };
+
+  const cfg = statusCfg[app.status];
+
+  return (
+    <Card>
+      <CardContent className="flex items-center gap-3 py-3">
+        <div className={cn("flex h-8 w-8 items-center justify-center rounded-full bg-gray-100", cfg.color)}>
+          <FaIcon icon={cfg.icon} style="duotone" className="text-sm" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <Link
+            href={`/college/${app.collegeId}`}
+            className="text-sm font-medium text-foreground hover:text-primary truncate block"
+          >
+            {app.collegeName || "Unknown College"}
+          </Link>
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+            {app.collegeCity && app.collegeState && (
+              <span>{app.collegeCity}, {app.collegeState}</span>
+            )}
+            {app.applicationType && (
+              <>
+                <span className="text-border">·</span>
+                <span>{STATUS_LABELS[app.status]}</span>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-col items-end shrink-0">
+          <Badge
+            variant="outline"
+            className={cn("text-[10px]", cfg.color)}
+          >
+            {STATUS_LABELS[app.status]}
+          </Badge>
+          {app.deadline && (
+            <span className="text-[10px] text-muted-foreground mt-0.5">
+              {new Date(app.deadline).toLocaleDateString()}
+            </span>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Activity Row
+// ---------------------------------------------------------------------------
+
+const ACTIVITY_CONFIG: Record<string, { icon: string; verb: string }> = {
+  favorited_college: { icon: "heart", verb: "favorited" },
+  unfavorited_college: { icon: "heart-crack", verb: "unfavorited" },
+  added_note: { icon: "comment", verb: "added a note on" },
+  updated_application: { icon: "clipboard-list", verb: "updated application for" },
+  added_to_folder: { icon: "folder-plus", verb: "added to a folder" },
+  created_folder: { icon: "folder", verb: "created a new folder" },
+  accepted_suggestion: { icon: "lightbulb", verb: "accepted a suggestion for" },
+};
+
+function ActivityRow({ event }: { event: ActivityEvent }) {
+  const cfg = ACTIVITY_CONFIG[event.action] || { icon: "circle", verb: event.action };
+
+  return (
+    <div className="flex items-start gap-3 rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors">
+      <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">
+        <FaIcon icon={cfg.icon} style="duotone" className="text-[10px] text-primary" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-foreground">
+          <span className="text-muted-foreground">{cfg.verb}</span>
+          {event.collegeName && (
+            <>
+              {" "}
+              <Link
+                href={`/college/${event.collegeId}`}
+                className="font-medium text-primary hover:underline"
+              >
+                {event.collegeName}
+              </Link>
+            </>
+          )}
+        </p>
+        <p className="text-[10px] text-muted-foreground">
+          {timeAgo(event.createdAt)}
+        </p>
+      </div>
     </div>
   );
 }

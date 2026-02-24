@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export async function GET() {
@@ -74,6 +74,50 @@ export async function GET() {
     console.error("Error fetching invites:", error);
     return NextResponse.json(
       { error: "Failed to fetch invites" },
+      { status: 500 },
+    );
+  }
+}
+
+/**
+ * DELETE /api/family/invites?id=...
+ * Delete an invite (to allow re-inviting). Only the inviter can delete.
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const inviteId = searchParams.get("id");
+
+    if (!inviteId) {
+      return NextResponse.json(
+        { error: "Invite id is required" },
+        { status: 400 },
+      );
+    }
+
+    const service = createServiceClient();
+    const { error } = await service
+      .from("family_invites")
+      .delete()
+      .eq("id", inviteId)
+      .eq("inviter_id", user.id);
+
+    if (error) throw error;
+
+    return NextResponse.json({ message: "Invite deleted" });
+  } catch (error) {
+    console.error("Error deleting invite:", error);
+    return NextResponse.json(
+      { error: "Failed to delete invite" },
       { status: 500 },
     );
   }

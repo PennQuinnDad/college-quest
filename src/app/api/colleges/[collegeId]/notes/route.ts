@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { logActivity } from "@/lib/activity";
 
 /**
  * GET /api/colleges/[collegeId]/notes
@@ -160,6 +161,11 @@ export async function POST(
       .select("display_name")
       .eq("id", user.id)
       .maybeSingle();
+
+    await logActivity(user.id, "added_note", {
+      collegeId,
+      visibility: visibility === "private" ? "private" : "family",
+    });
 
     return NextResponse.json(
       {

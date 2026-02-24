@@ -36,6 +36,7 @@ import {
 import { CollegeActions } from "@/components/college-actions";
 import { CollegeResources } from "@/components/college-resources";
 import { CollegeNotes } from "@/components/college-notes";
+import { ApplicationTracker } from "@/components/application-tracker";
 import { toast } from "@/components/ui/toaster";
 import { cn, formatCurrency, formatPercent, formatNumber } from "@/lib/utils";
 import type { College, School, StudentSummary } from "@/lib/types";
@@ -902,6 +903,15 @@ export default function CollegeDetailPage({
 
             {/* Resources */}
             <CollegeResources collegeId={id} isAdmin={user?.role === "admin"} />
+
+            {/* Application Tracker */}
+            {user && (
+              <ApplicationTracker
+                collegeId={id}
+                collegeName={college.name}
+                isStudent={user.accountType === "student"}
+              />
+            )}
 
             {/* Notes */}
             {user && <CollegeNotes collegeId={id} user={user} />}
