@@ -22,7 +22,7 @@ interface FilterParams {
 }
 
 // ── Apply all filters to a Supabase query builder ─────────────────────────────
-function applyFilters<T extends Record<string, unknown>>(
+function applyFilters<T extends Record<string, any>>(
   dbQuery: T,
   f: FilterParams,
 ): T {

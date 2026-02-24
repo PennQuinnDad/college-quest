@@ -63,6 +63,7 @@ describe("GET /api/folders", () => {
             name: "My Folder",
             color: "#ff0000",
             position: 0,
+            shared_with_family: false,
             created_at: "2025-01-01",
             updated_at: "2025-01-02",
           },
@@ -79,6 +80,7 @@ describe("GET /api/folders", () => {
       name: "My Folder",
       color: "#ff0000",
       position: 0,
+      sharedWithFamily: false,
       createdAt: "2025-01-01",
       updatedAt: "2025-01-02",
     });

@@ -808,6 +808,28 @@ function HomePageContent() {
               </div>
             )}
 
+            {/* Dashboard link (parent accounts) */}
+            {user?.accountType === "parent" && (
+              <a
+                href="/dashboard"
+                className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <FaIcon icon="chart-line" style="duotone" className="text-sm" />
+                <span className="hidden sm:inline">Dashboard</span>
+              </a>
+            )}
+
+            {/* Family settings link */}
+            {user && (
+              <a
+                href="/settings/family"
+                className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <FaIcon icon="users" style="duotone" className="text-sm" />
+                <span className="hidden sm:inline">Family</span>
+              </a>
+            )}
+
             {/* Admin link */}
             {user?.role === "admin" && (
               <a

@@ -51,6 +51,7 @@ export interface Folder {
   name: string;
   color: string | null;
   position: number;
+  sharedWithFamily: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -72,8 +73,38 @@ export interface FamilyLink {
   parentId: string;
   studentId: string;
   status: "pending" | "active" | "revoked";
+  canViewFavorites: boolean;
+  canViewFolders: boolean;
+  canViewActivity: boolean;
   createdAt: string;
   acceptedAt: string | null;
+}
+
+export interface FamilyMember {
+  linkId: string;
+  accountType: "student" | "parent";
+  id: string;
+  displayName: string | null;
+  email: string;
+  avatarUrl: string | null;
+  graduationYear: number | null;
+  highSchool: string | null;
+  lastActiveAt: string | null;
+  canViewFavorites: boolean;
+  canViewFolders: boolean;
+  canViewActivity: boolean;
+  status: "pending" | "active" | "revoked";
+}
+
+export interface CollegeNote {
+  id: string;
+  collegeId: string;
+  userId: string;
+  userName: string | null;
+  content: string;
+  visibility: "private" | "family";
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface FamilyInvite {

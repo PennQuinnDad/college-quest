@@ -15,7 +15,7 @@ export async function GET() {
     const service = createServiceClient();
     const { data, error } = await service
       .from("favorite_folders")
-      .select("id, name, color, position, created_at, updated_at")
+      .select("id, name, color, position, shared_with_family, created_at, updated_at")
       .eq("user_id", user.id)
       .order("position", { ascending: true });
 
@@ -27,6 +27,7 @@ export async function GET() {
         name: f.name,
         color: f.color,
         position: f.position,
+        sharedWithFamily: f.shared_with_family ?? false,
         createdAt: f.created_at,
         updatedAt: f.updated_at,
       })),

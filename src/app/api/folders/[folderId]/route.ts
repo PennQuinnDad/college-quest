@@ -64,6 +64,7 @@ export async function PATCH(
     if (body.name !== undefined) updates.name = body.name;
     if (body.color !== undefined) updates.color = body.color;
     if (body.position !== undefined) updates.position = body.position;
+    if (body.sharedWithFamily !== undefined) updates.shared_with_family = body.sharedWithFamily;
 
     const service = createServiceClient();
     const { data, error } = await service
