@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 
+/**
+ * Sanitize user input for use in PostgREST filter strings (.or(), .ilike(), etc.).
+ * Strips characters that have special meaning in PostgREST filter syntax:
+ * commas (value separator), dots (operator delimiter), parentheses (grouping),
+ * backslashes, and percent/underscore (SQL wildcards injected outside the intended ones).
+ */
+function sanitizeFilterValue(value: string): string {
+  return value.replace(/[,.()\\\/%_]/g, "");
+}
+
 // ── Parsed filter parameters ──────────────────────────────────────────────────
 interface FilterParams {
   query: string;
@@ -28,12 +38,15 @@ function applyFilters<T extends Record<string, any>>(
 ): T {
   let q = dbQuery;
 
-  // Text search
+  // Text search — sanitize to prevent PostgREST filter injection
   if (f.query) {
-    const like = `%${f.query}%`;
-    q = q.or(
-      `name.ilike.${like},city.ilike.${like},state.ilike.${like},region.ilike.${like},type.ilike.${like},description.ilike.${like},website.ilike.${like}`,
-    ) as T;
+    const safe = sanitizeFilterValue(f.query);
+    if (safe) {
+      const like = `%${safe}%`;
+      q = q.or(
+        `name.ilike.${like},city.ilike.${like},state.ilike.${like},region.ilike.${like},type.ilike.${like},description.ilike.${like},website.ilike.${like}`,
+      ) as T;
+    }
   }
 
   // Enum / set filters

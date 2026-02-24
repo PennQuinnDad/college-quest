@@ -3,6 +3,11 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { verifyAdmin } from "@/lib/admin-auth";
 import { v4 as uuidv4 } from "uuid";
 
+/** Strip PostgREST-special characters to prevent filter injection. */
+function sanitizeFilterValue(value: string): string {
+  return value.replace(/[,.()\\\/%_]/g, "");
+}
+
 export async function GET(request: NextRequest) {
   const authError = await verifyAdmin();
   if (authError) return authError;
@@ -20,9 +25,12 @@ export async function GET(request: NextRequest) {
     let dbQuery = supabase.from("colleges").select("*", { count: "exact" });
 
     if (query) {
-      dbQuery = dbQuery.or(
-        `name.ilike.%${query}%,city.ilike.%${query}%,state.ilike.%${query}%`
-      );
+      const safe = sanitizeFilterValue(query);
+      if (safe) {
+        dbQuery = dbQuery.or(
+          `name.ilike.%${safe}%,city.ilike.%${safe}%,state.ilike.%${safe}%`
+        );
+      }
     }
 
     const sortColumn =

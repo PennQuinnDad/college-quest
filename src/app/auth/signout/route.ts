@@ -9,7 +9,9 @@ export async function GET(request: NextRequest) {
   const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
   const { origin } = new URL(request.url);
 
-  const redirectBase = forwardedHost
+  // Only trust x-forwarded-host when TRUSTED_HOSTS is configured and matches
+  const trustedHosts = process.env.TRUSTED_HOSTS?.split(",").map(h => h.trim()) ?? [];
+  const redirectBase = forwardedHost && trustedHosts.includes(forwardedHost)
     ? `${forwardedProto}://${forwardedHost}`
     : origin;
 

@@ -1,16 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 
+/**
+ * Validate redirect path to prevent open redirect attacks.
+ * Only allows relative paths starting with "/" that don't escape to external hosts.
+ */
+function safeRedirectPath(next: string | null): string {
+  if (!next) return "/";
+  // Must start with a single "/" and NOT "//" (protocol-relative URL)
+  // Also block backslash which some browsers treat as "/"
+  if (!next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) {
+    return "/";
+  }
+  // Strip any embedded protocol
+  if (next.includes("://")) return "/";
+  return next;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/";
+  const next = safeRedirectPath(searchParams.get("next"));
 
   const forwardedHost = request.headers.get("x-forwarded-host");
   const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
   const isLocalEnv = process.env.NODE_ENV === "development";
 
-  const base = !isLocalEnv && forwardedHost
+  // Only trust x-forwarded-host when TRUSTED_HOSTS is configured and matches
+  const trustedHosts = process.env.TRUSTED_HOSTS?.split(",").map(h => h.trim()) ?? [];
+  const base = !isLocalEnv && forwardedHost && trustedHosts.includes(forwardedHost)
     ? `${forwardedProto}://${forwardedHost}`
     : origin;
 

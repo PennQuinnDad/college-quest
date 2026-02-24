@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 
+/** Strip PostgREST-special characters to prevent filter injection. */
+function sanitizeFilterValue(value: string): string {
+  return value.replace(/[,.()\\\/%_]/g, "");
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceClient();
@@ -11,10 +16,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([]);
     }
 
+    const safe = sanitizeFilterValue(query);
+    if (!safe || safe.length < 2) {
+      return NextResponse.json([]);
+    }
+
     const { data, error } = await supabase
       .from("colleges")
       .select("id, name")
-      .ilike("name", `%${query}%`)
+      .ilike("name", `%${safe}%`)
       .limit(10);
 
     if (error) throw error;
