@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { verifyAdmin } from "@/lib/admin-auth";
 
 export async function GET(
@@ -42,17 +42,10 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authError = await verifyAdmin();
+  if (authError) return authError;
+
   try {
-    // Verify authenticated user
-    const supabaseAuth = await createClient();
-    const {
-      data: { user },
-    } = await supabaseAuth.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id } = await params;
     const body = await request.json();
 
