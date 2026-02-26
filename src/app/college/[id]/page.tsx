@@ -759,163 +759,157 @@ export default function CollegeDetailPage({
         )}
 
         {/* ================================================================ */}
-        {/* TWO-COLUMN LAYOUT                                                 */}
+        {/* TWO-COLUMN MASONRY LAYOUT                                        */}
         {/* ================================================================ */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* LEFT COLUMN */}
-          <div className="flex flex-col gap-6">
-            {/* About */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <FaIcon icon="circle-info" style="duotone" className="text-sm text-primary" />
-                  About {college.name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {college.description ? (
-                  <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-                    {college.description}
-                  </p>
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">
-                    No description available.
-                  </p>
-                )}
-                {(college.type || college.size || college.region) && (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {college.type && (
-                      <Badge variant="secondary" className="gap-1">
-                        <FaIcon icon="building" style="duotone" className="text-[10px]" />
-                        {college.type}
-                      </Badge>
-                    )}
-                    {college.size && (
-                      <Badge variant="secondary" className="gap-1">
-                        <FaIcon icon="users" style="duotone" className="text-[10px]" />
-                        {college.size}
-                      </Badge>
-                    )}
-                    {college.region && (
-                      <Badge variant="outline" className="gap-1">
-                        <FaIcon icon="location-dot" style="duotone" className="text-[10px]" />
-                        {college.region}
-                      </Badge>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+        <div className="columns-1 gap-6 lg:columns-2 [&>*]:mb-6 [&>*]:break-inside-avoid">
+          {/* About */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <FaIcon icon="circle-info" style="duotone" className="text-sm text-primary" />
+                About {college.name}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {college.description ? (
+                <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                  {college.description}
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  No description available.
+                </p>
+              )}
+              {(college.type || college.size || college.region) && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {college.type && (
+                    <Badge variant="secondary" className="gap-1">
+                      <FaIcon icon="building" style="duotone" className="text-[10px]" />
+                      {college.type}
+                    </Badge>
+                  )}
+                  {college.size && (
+                    <Badge variant="secondary" className="gap-1">
+                      <FaIcon icon="users" style="duotone" className="text-[10px]" />
+                      {college.size}
+                    </Badge>
+                  )}
+                  {college.region && (
+                    <Badge variant="outline" className="gap-1">
+                      <FaIcon icon="location-dot" style="duotone" className="text-[10px]" />
+                      {college.region}
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-            {/* Schools & Programs */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <FaIcon icon="book-open" style="duotone" className="text-sm text-primary" />
-                  Schools &amp; Programs
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {schoolsByCategory.length > 0 ? (
-                  <div className="space-y-4">
-                    {schoolsByCategory.map(([category, programs]) => (
-                      <div key={category}>
-                        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          {category}
-                        </h4>
-                        <div className="flex flex-wrap gap-1.5">
-                          {programs.map((p) => (
-                            <Badge
-                              key={p.id}
-                              variant="outline"
-                              className={cn("text-xs", getCategoryColor(category))}
-                            >
-                              {p.name}
-                            </Badge>
-                          ))}
-                        </div>
+          {/* Tuition & Costs */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <FaIcon icon="dollar-sign" style="duotone" className="text-sm text-primary" />
+                Tuition &amp; Costs
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="space-y-3">
+                <StatRow label="In-State Tuition" value={formatCurrency(college.tuitionInState)} />
+                <StatRow label="Out-of-State Tuition" value={formatCurrency(college.tuitionOutOfState)} />
+                <StatRow label="Net Cost" value={formatCurrency(college.netCost)} />
+              </dl>
+            </CardContent>
+          </Card>
+
+          {/* Schools & Programs */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <FaIcon icon="book-open" style="duotone" className="text-sm text-primary" />
+                Schools &amp; Programs
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {schoolsByCategory.length > 0 ? (
+                <div className="space-y-4">
+                  {schoolsByCategory.map(([category, programs]) => (
+                    <div key={category}>
+                      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        {category}
+                      </h4>
+                      <div className="flex flex-wrap gap-1.5">
+                        {programs.map((p) => (
+                          <Badge
+                            key={p.id}
+                            variant="outline"
+                            className={cn("text-xs", getCategoryColor(category))}
+                          >
+                            {p.name}
+                          </Badge>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ) : college.programs && college.programs.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {college.programs.map((program) => (
-                      <Badge key={program} variant="secondary" className="text-xs">
-                        {program}
-                      </Badge>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">
-                    No programs listed.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                    </div>
+                  ))}
+                </div>
+              ) : college.programs && college.programs.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {college.programs.map((program) => (
+                    <Badge key={program} variant="secondary" className="text-xs">
+                      {program}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  No programs listed.
+                </p>
+              )}
+            </CardContent>
+          </Card>
 
-          {/* RIGHT COLUMN */}
-          <div className="flex flex-col gap-6">
-            {/* Tuition & Costs */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <FaIcon icon="dollar-sign" style="duotone" className="text-sm text-primary" />
-                  Tuition &amp; Costs
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <dl className="space-y-3">
-                  <StatRow label="In-State Tuition" value={formatCurrency(college.tuitionInState)} />
-                  <StatRow label="Out-of-State Tuition" value={formatCurrency(college.tuitionOutOfState)} />
-                  <StatRow label="Net Cost" value={formatCurrency(college.netCost)} />
-                </dl>
-              </CardContent>
-            </Card>
+          {/* Admissions */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <FaIcon icon="chart-line" style="duotone" className="text-sm text-primary" />
+                Admissions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="space-y-3">
+                <StatRow label="Acceptance Rate" value={formatPercent(college.acceptanceRate)} />
+                <StatRow
+                  label="SAT Math"
+                  value={college.satMath != null ? formatNumber(college.satMath) : "N/A"}
+                />
+                <StatRow
+                  label="SAT Reading"
+                  value={college.satReading != null ? formatNumber(college.satReading) : "N/A"}
+                />
+                <StatRow
+                  label="ACT Composite"
+                  value={college.actComposite != null ? formatNumber(college.actComposite) : "N/A"}
+                />
+                <StatRow label="Graduation Rate" value={formatPercent(college.graduationRate)} />
+              </dl>
+            </CardContent>
+          </Card>
 
-            {/* Admissions */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <FaIcon icon="chart-line" style="duotone" className="text-sm text-primary" />
-                  Admissions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <dl className="space-y-3">
-                  <StatRow label="Acceptance Rate" value={formatPercent(college.acceptanceRate)} />
-                  <StatRow
-                    label="SAT Math"
-                    value={college.satMath != null ? formatNumber(college.satMath) : "N/A"}
-                  />
-                  <StatRow
-                    label="SAT Reading"
-                    value={college.satReading != null ? formatNumber(college.satReading) : "N/A"}
-                  />
-                  <StatRow
-                    label="ACT Composite"
-                    value={college.actComposite != null ? formatNumber(college.actComposite) : "N/A"}
-                  />
-                  <StatRow label="Graduation Rate" value={formatPercent(college.graduationRate)} />
-                </dl>
-              </CardContent>
-            </Card>
+          {/* Resources */}
+          <CollegeResources collegeId={id} isAdmin={user?.role === "admin"} />
 
-            {/* Resources */}
-            <CollegeResources collegeId={id} isAdmin={user?.role === "admin"} />
+          {/* Application Tracker */}
+          {user && (
+            <ApplicationTracker
+              collegeId={id}
+              collegeName={college.name}
+              isStudent={user.accountType === "student"}
+            />
+          )}
 
-            {/* Application Tracker */}
-            {user && (
-              <ApplicationTracker
-                collegeId={id}
-                collegeName={college.name}
-                isStudent={user.accountType === "student"}
-              />
-            )}
-
-            {/* Notes */}
-            {user && <CollegeNotes collegeId={id} user={user} />}
-          </div>
+          {/* Notes */}
+          {user && <CollegeNotes collegeId={id} user={user} />}
         </div>
       </div>
 
