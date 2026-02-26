@@ -764,6 +764,9 @@ export default function CollegeDetailPage({
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Left column */}
           <div className="space-y-6">
+            {/* Notes */}
+            {user && <CollegeNotes collegeId={id} user={user} />}
+
             {/* About */}
             <Card>
               <CardHeader className="pb-3">
@@ -912,9 +915,6 @@ export default function CollegeDetailPage({
 
             {/* Resources */}
             <CollegeResources collegeId={id} isAdmin={user?.role === "admin"} />
-
-            {/* Notes */}
-            {user && <CollegeNotes collegeId={id} user={user} />}
           </div>
         </div>
       </div>
