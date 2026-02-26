@@ -1235,12 +1235,27 @@ function HomePageContent() {
         {/* ================================================================ */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-col gap-1">
-            <div className="flex items-baseline gap-2">
+            <div className="flex items-baseline gap-2 flex-wrap">
               <h1 className="text-2xl font-bold text-foreground">
                 {collegesLoading
                   ? "Loading..."
                   : `${formatNumber(totalResults)} college${totalResults !== 1 ? "s" : ""} found`}
               </h1>
+              {!collegesLoading && activeFilters.length > 0 && (
+                <span className="text-sm text-muted-foreground">
+                  {(() => {
+                    const parts: string[] = [];
+                    if (params.states) parts.push(`in ${params.states.split(",").join(", ")}`);
+                    if (params.regions) parts.push(params.regions.split(",").join(", "));
+                    if (params.sizes) parts.push(params.sizes.split(",").join(", "));
+                    if (params.types) parts.push(params.types.split(",").join(", "));
+                    if (params.acceptanceRanges) parts.push(params.acceptanceRanges.split(",").join(", "));
+                    if (params.programCategories) parts.push(params.programCategories.split(",").join(", "));
+                    if (params.jesuitOnly === "true") parts.push("Jesuit");
+                    return parts.length > 0 ? `\u2014 ${parts.join(" · ")}` : "";
+                  })()}
+                </span>
+              )}
               {(showFavoritesOnly || selectedFolderId) && (
                 <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50">
                   {selectedFolderId
