@@ -215,6 +215,27 @@ function HomePageContent() {
     enabled: !!selectedFolderId,
   });
 
+  const { data: folderCounts = new Map<string, number>() } = useQuery<Map<string, number>>({
+    queryKey: ["folder-counts", folders.map((f) => f.id)],
+    queryFn: async () => {
+      const results = await Promise.all(
+        folders.map(async (folder) => {
+          const res = await fetch(`/api/folders/${folder.id}/items`);
+          if (!res.ok) return { folderId: folder.id, count: 0 };
+          const data = await res.json();
+          return { folderId: folder.id, count: (data.items || []).length };
+        })
+      );
+      const map = new Map<string, number>();
+      for (const { folderId, count } of results) {
+        map.set(folderId, count);
+      }
+      return map;
+    },
+    enabled: !!user && folders.length > 0,
+    staleTime: 30_000,
+  });
+
   const toggleFavoriteMutation = useMutation({
     mutationFn: async (collegeId: string) => {
       if (favoriteIds.has(collegeId)) {
@@ -773,6 +794,11 @@ function HomePageContent() {
                               className="text-sm"
                             />
                             <span className="truncate">{folder.name}</span>
+                            {(folderCounts.get(folder.id) ?? 0) > 0 && (
+                              <span className="ml-auto text-xs text-muted-foreground">
+                                {folderCounts.get(folder.id)}
+                              </span>
+                            )}
                           </button>
                         ))}
                       </div>
@@ -1235,12 +1261,27 @@ function HomePageContent() {
         {/* ================================================================ */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-col gap-1">
-            <div className="flex items-baseline gap-2">
+            <div className="flex items-baseline gap-2 flex-wrap">
               <h1 className="text-2xl font-bold text-foreground">
                 {collegesLoading
                   ? "Loading..."
                   : `${formatNumber(totalResults)} college${totalResults !== 1 ? "s" : ""} found`}
               </h1>
+              {!collegesLoading && activeFilters.length > 0 && (
+                <span className="text-sm text-muted-foreground">
+                  {(() => {
+                    const parts: string[] = [];
+                    if (params.states) parts.push(`in ${params.states.split(",").join(", ")}`);
+                    if (params.regions) parts.push(params.regions.split(",").join(", "));
+                    if (params.sizes) parts.push(params.sizes.split(",").join(", "));
+                    if (params.types) parts.push(params.types.split(",").join(", "));
+                    if (params.acceptanceRanges) parts.push(params.acceptanceRanges.split(",").join(", "));
+                    if (params.programCategories) parts.push(params.programCategories.split(",").join(", "));
+                    if (params.jesuitOnly === "true") parts.push("Jesuit");
+                    return parts.length > 0 ? `\u2014 ${parts.join(" · ")}` : "";
+                  })()}
+                </span>
+              )}
               {(showFavoritesOnly || selectedFolderId) && (
                 <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50">
                   {selectedFolderId

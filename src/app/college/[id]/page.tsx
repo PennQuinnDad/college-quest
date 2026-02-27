@@ -759,11 +759,14 @@ export default function CollegeDetailPage({
         )}
 
         {/* ================================================================ */}
-        {/* TWO-COLUMN LAYOUT                                                 */}
+        {/* TWO-COLUMN GRID LAYOUT                                           */}
         {/* ================================================================ */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* LEFT COLUMN */}
-          <div className="flex flex-col gap-6">
+          {/* Left column */}
+          <div className="space-y-6">
+            {/* Notes */}
+            {user && <CollegeNotes collegeId={id} user={user} />}
+
             {/* About */}
             <Card>
               <CardHeader className="pb-3">
@@ -804,6 +807,63 @@ export default function CollegeDetailPage({
                     )}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Admissions */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <FaIcon icon="chart-line" style="duotone" className="text-sm text-primary" />
+                  Admissions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <dl className="space-y-3">
+                  <StatRow label="Acceptance Rate" value={formatPercent(college.acceptanceRate)} />
+                  <StatRow
+                    label="SAT Math"
+                    value={college.satMath != null ? formatNumber(college.satMath) : "N/A"}
+                  />
+                  <StatRow
+                    label="SAT Reading"
+                    value={college.satReading != null ? formatNumber(college.satReading) : "N/A"}
+                  />
+                  <StatRow
+                    label="ACT Composite"
+                    value={college.actComposite != null ? formatNumber(college.actComposite) : "N/A"}
+                  />
+                  <StatRow label="Graduation Rate" value={formatPercent(college.graduationRate)} />
+                </dl>
+              </CardContent>
+            </Card>
+
+            {/* Application Tracker */}
+            {user && (
+              <ApplicationTracker
+                collegeId={id}
+                collegeName={college.name}
+                isStudent={user.accountType === "student"}
+              />
+            )}
+          </div>
+
+          {/* Right column */}
+          <div className="space-y-6">
+            {/* Tuition & Costs */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <FaIcon icon="dollar-sign" style="duotone" className="text-sm text-primary" />
+                  Tuition &amp; Costs
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <dl className="space-y-3">
+                  <StatRow label="In-State Tuition" value={formatCurrency(college.tuitionInState)} />
+                  <StatRow label="Out-of-State Tuition" value={formatCurrency(college.tuitionOutOfState)} />
+                  <StatRow label="Net Cost" value={formatCurrency(college.netCost)} />
+                </dl>
               </CardContent>
             </Card>
 
@@ -852,69 +912,9 @@ export default function CollegeDetailPage({
                 )}
               </CardContent>
             </Card>
-          </div>
-
-          {/* RIGHT COLUMN */}
-          <div className="flex flex-col gap-6">
-            {/* Tuition & Costs */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <FaIcon icon="dollar-sign" style="duotone" className="text-sm text-primary" />
-                  Tuition &amp; Costs
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <dl className="space-y-3">
-                  <StatRow label="In-State Tuition" value={formatCurrency(college.tuitionInState)} />
-                  <StatRow label="Out-of-State Tuition" value={formatCurrency(college.tuitionOutOfState)} />
-                  <StatRow label="Net Cost" value={formatCurrency(college.netCost)} />
-                </dl>
-              </CardContent>
-            </Card>
-
-            {/* Admissions */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <FaIcon icon="chart-line" style="duotone" className="text-sm text-primary" />
-                  Admissions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <dl className="space-y-3">
-                  <StatRow label="Acceptance Rate" value={formatPercent(college.acceptanceRate)} />
-                  <StatRow
-                    label="SAT Math"
-                    value={college.satMath != null ? formatNumber(college.satMath) : "N/A"}
-                  />
-                  <StatRow
-                    label="SAT Reading"
-                    value={college.satReading != null ? formatNumber(college.satReading) : "N/A"}
-                  />
-                  <StatRow
-                    label="ACT Composite"
-                    value={college.actComposite != null ? formatNumber(college.actComposite) : "N/A"}
-                  />
-                  <StatRow label="Graduation Rate" value={formatPercent(college.graduationRate)} />
-                </dl>
-              </CardContent>
-            </Card>
 
             {/* Resources */}
             <CollegeResources collegeId={id} isAdmin={user?.role === "admin"} />
-
-            {/* Application Tracker */}
-            {user && (
-              <ApplicationTracker
-                collegeId={id}
-                collegeName={college.name}
-                isStudent={user.accountType === "student"}
-              />
-            )}
-
-            {/* Notes */}
-            {user && <CollegeNotes collegeId={id} user={user} />}
           </div>
         </div>
       </div>

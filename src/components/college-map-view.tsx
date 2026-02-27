@@ -69,7 +69,7 @@ interface CollegeMapViewProps {
 function FitBounds({ colleges }: { colleges: College[] }) {
   const map = useMap();
 
-  useMemo(() => {
+  useEffect(() => {
     const points = colleges
       .filter((c) => c.latitude != null && c.longitude != null)
       .map((c) => [c.latitude!, c.longitude!] as [number, number]);
@@ -136,11 +136,14 @@ export default function CollegeMapView({
   );
 
   const visibleColleges = useMemo(() => {
+    // When filters are active, always show college cards below the map
+    // so users don't have to zoom in manually after filtering
+    if (isFiltered) return mappableColleges;
     if (!viewport || viewport.zoom < ZOOM_THRESHOLD) return [];
     return mappableColleges.filter((c) =>
       viewport.bounds.contains(L.latLng(c.latitude!, c.longitude!))
     );
-  }, [viewport, mappableColleges]);
+  }, [viewport, mappableColleges, isFiltered]);
 
   if (isLoading) {
     return (
