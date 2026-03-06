@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { sendFamilyInviteEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -90,6 +91,15 @@ export async function POST(request: NextRequest) {
       },
       { onConflict: "email", ignoreDuplicates: true },
     );
+
+    // Fire-and-forget: send invite email (never blocks response)
+    sendFamilyInviteEmail({
+      to: normalizedEmail,
+      inviterName: profile.display_name,
+      inviterType,
+      token: invite.token,
+      expiresAt: invite.expires_at,
+    });
 
     return NextResponse.json(
       {

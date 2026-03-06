@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { verifyAdmin } from "@/lib/admin-auth";
+import { mapCollegeRow } from "@/lib/map-college";
 
 export async function GET(
   _request: NextRequest,
@@ -26,7 +27,7 @@ export async function GET(
       throw error;
     }
 
-    const response = NextResponse.json(data);
+    const response = NextResponse.json(mapCollegeRow(data as Record<string, unknown>));
     response.headers.set("Cache-Control", "public, s-maxage=3600, stale-while-revalidate=86400");
     return response;
   } catch (error) {
@@ -76,7 +77,7 @@ export async function POST(
       throw error;
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(mapCollegeRow(data as Record<string, unknown>));
   } catch (error) {
     console.error("Error updating college:", error);
     return NextResponse.json(

@@ -379,19 +379,32 @@ function HomePageContent() {
     };
   }, [searchInput]);
 
-  const { data: autocompleteResults = [] } = useQuery<
-    { id: string; name: string }[]
-  >({
+  const { data: autocompleteData } = useQuery<{
+    colleges: { id: string; name: string }[];
+    programs: { name: string; category: string | null; collegeCount: number }[];
+  }>({
     queryKey: ["autocomplete", debouncedSearchTerm],
     queryFn: async () => {
       const res = await fetch(
         `/api/colleges/autocomplete?q=${encodeURIComponent(debouncedSearchTerm)}`
       );
-      if (!res.ok) return [];
+      if (!res.ok) return { colleges: [], programs: [] };
       return res.json();
     },
     enabled: debouncedSearchTerm.length >= 2,
   });
+
+  type AutocompleteItem =
+    | { type: "college"; id: string; name: string }
+    | { type: "program"; name: string; category: string | null; collegeCount: number };
+
+  const autocompleteColleges = autocompleteData?.colleges ?? [];
+  const autocompletePrograms = autocompleteData?.programs ?? [];
+  const autocompleteItems: AutocompleteItem[] = [
+    ...autocompleteColleges.map((c) => ({ type: "college" as const, ...c })),
+    ...autocompletePrograms.map((p) => ({ type: "program" as const, ...p })),
+  ];
+  const hasAutocompleteResults = autocompleteItems.length > 0;
 
   // Close autocomplete when clicking outside
   useEffect(() => {
@@ -410,7 +423,7 @@ function HomePageContent() {
   }, []);
 
   function handleSearchKeyDown(e: React.KeyboardEvent) {
-    if (!autocompleteOpen || autocompleteResults.length === 0) {
+    if (!autocompleteOpen || autocompleteItems.length === 0) {
       if (e.key === "Enter") {
         e.preventDefault();
         updateParams({ query: searchInput || undefined });
@@ -421,17 +434,17 @@ function HomePageContent() {
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setAutocompleteIndex((i) =>
-        i < autocompleteResults.length - 1 ? i + 1 : 0
+        i < autocompleteItems.length - 1 ? i + 1 : 0
       );
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setAutocompleteIndex((i) =>
-        i > 0 ? i - 1 : autocompleteResults.length - 1
+        i > 0 ? i - 1 : autocompleteItems.length - 1
       );
     } else if (e.key === "Enter") {
       e.preventDefault();
       if (autocompleteIndex >= 0) {
-        const item = autocompleteResults[autocompleteIndex];
+        const item = autocompleteItems[autocompleteIndex];
         setSearchInput(item.name);
         updateParams({ query: item.name });
       } else {
@@ -445,7 +458,7 @@ function HomePageContent() {
     }
   }
 
-  function handleAutocompleteSelect(item: { id: string; name: string }) {
+  function handleAutocompleteItemSelect(item: AutocompleteItem) {
     setSearchInput(item.name);
     updateParams({ query: item.name });
     setAutocompleteOpen(false);
@@ -1071,27 +1084,68 @@ function HomePageContent() {
           </div>
 
           {/* Autocomplete dropdown */}
-          {autocompleteOpen && autocompleteResults.length > 0 && (
+          {autocompleteOpen && hasAutocompleteResults && (
             <div
               ref={autocompleteRef}
               className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-border bg-white shadow-lg"
             >
-              {autocompleteResults.map((item, i) => (
-                <button
-                  key={item.id}
-                  onClick={() => handleAutocompleteSelect(item)}
-                  onMouseEnter={() => setAutocompleteIndex(i)}
-                  className={cn(
-                    "flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors",
-                    i === autocompleteIndex
-                      ? "bg-amber-50 text-foreground"
-                      : "text-foreground hover:bg-gray-50"
-                  )}
-                >
-                  <FaIcon icon="graduation-cap" style="duotone" className="text-sm shrink-0 text-muted-foreground" />
-                  <span>{item.name}</span>
-                </button>
-              ))}
+              {autocompleteColleges.length > 0 && (
+                <>
+                  <div className="px-4 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide bg-gray-50 border-b border-border">
+                    Colleges
+                  </div>
+                  {autocompleteColleges.map((college, i) => {
+                    const itemIndex = i;
+                    return (
+                      <button
+                        key={`college-${college.id}`}
+                        onClick={() => handleAutocompleteItemSelect({ type: "college", ...college })}
+                        onMouseEnter={() => setAutocompleteIndex(itemIndex)}
+                        className={cn(
+                          "flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors",
+                          itemIndex === autocompleteIndex
+                            ? "bg-amber-50 text-foreground"
+                            : "text-foreground hover:bg-gray-50"
+                        )}
+                      >
+                        <FaIcon icon="building-columns" style="duotone" className="text-sm shrink-0 text-muted-foreground" />
+                        <span>{college.name}</span>
+                      </button>
+                    );
+                  })}
+                </>
+              )}
+              {autocompletePrograms.length > 0 && (
+                <>
+                  <div className="px-4 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide bg-gray-50 border-b border-border">
+                    Programs
+                  </div>
+                  {autocompletePrograms.map((program, i) => {
+                    const itemIndex = autocompleteColleges.length + i;
+                    return (
+                      <button
+                        key={`program-${program.name}`}
+                        onClick={() => handleAutocompleteItemSelect({ type: "program", ...program })}
+                        onMouseEnter={() => setAutocompleteIndex(itemIndex)}
+                        className={cn(
+                          "flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors",
+                          itemIndex === autocompleteIndex
+                            ? "bg-amber-50 text-foreground"
+                            : "text-foreground hover:bg-gray-50"
+                        )}
+                      >
+                        <FaIcon icon="graduation-cap" style="duotone" className="text-sm shrink-0 text-muted-foreground" />
+                        <div className="flex-1 flex items-center justify-between min-w-0">
+                          <span className="truncate">{program.name}</span>
+                          <span className="ml-2 shrink-0 text-xs text-muted-foreground">
+                            {program.collegeCount} college{program.collegeCount !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </>
+              )}
             </div>
           )}
         </div>

@@ -160,6 +160,27 @@ export default function FamilySettingsPage() {
     },
   });
 
+  // ---- Resend invite email mutation ----
+  const resendInvite = useMutation({
+    mutationFn: async (inviteId: string) => {
+      const res = await fetch("/api/family/invites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inviteId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to resend");
+      }
+    },
+    onSuccess: () => {
+      toast({ title: "Invite email resent!" });
+    },
+    onError: (err: Error) => {
+      toast({ title: err.message, variant: "destructive" });
+    },
+  });
+
   // ---- Re-invite mutation (delete expired + send new) ----
   const reInvite = useMutation({
     mutationFn: async ({ inviteId, email }: { inviteId: string; email: string }) => {
@@ -503,10 +524,25 @@ export default function FamilySettingsPage() {
                         Expires {new Date(invite.expiresAt).toLocaleDateString()}
                       </p>
                     </div>
-                    <Badge variant="outline" className="text-amber-600">
-                      <FaIcon icon="hourglass-half" style="duotone" className="mr-1 text-[10px]" />
-                      Pending
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => resendInvite.mutate(invite.id)}
+                        disabled={resendInvite.isPending}
+                      >
+                        {resendInvite.isPending ? (
+                          <FaIcon icon="spinner" style="duotone" className="mr-1.5 text-xs fa-spin" />
+                        ) : (
+                          <FaIcon icon="envelope" style="solid" className="mr-1.5 text-xs" />
+                        )}
+                        Resend
+                      </Button>
+                      <Badge variant="outline" className="text-amber-600">
+                        <FaIcon icon="hourglass-half" style="duotone" className="mr-1 text-[10px]" />
+                        Pending
+                      </Badge>
+                    </div>
                   </CardContent>
                 </Card>
               ))}

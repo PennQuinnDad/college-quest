@@ -9,24 +9,61 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get("query") || searchParams.get("q") || "";
 
     if (!query || query.length < 2) {
-      return NextResponse.json([]);
+      return NextResponse.json({ colleges: [], programs: [] });
     }
 
     const safe = sanitizeFilterValue(query);
     if (!safe || safe.length < 2) {
-      return NextResponse.json([]);
+      return NextResponse.json({ colleges: [], programs: [] });
     }
 
-    const { data, error } = await supabase
-      .from("colleges")
-      .select("id, name")
-      .ilike("name", `%${safe}%`)
-      .limit(10);
+    // Fetch college name matches and program matches in parallel
+    const [collegeResult, schoolResult] = await Promise.all([
+      supabase
+        .from("colleges")
+        .select("id, name")
+        .ilike("name", `%${safe}%`)
+        .limit(7),
+      supabase
+        .from("schools")
+        .select("name, category, college_id")
+        .ilike("name", `%${safe}%`)
+        .limit(200),
+    ]);
 
-    if (error) throw error;
+    if (collegeResult.error) throw collegeResult.error;
 
-    const response = NextResponse.json(data || []);
-    response.headers.set("Cache-Control", "public, s-maxage=300, stale-while-revalidate=3600");
+    // Deduplicate programs by name, count distinct colleges per program
+    const programMap = new Map<
+      string,
+      { category: string | null; collegeIds: Set<string> }
+    >();
+    for (const s of schoolResult.data || []) {
+      const key = s.name;
+      if (!programMap.has(key)) {
+        programMap.set(key, { category: s.category, collegeIds: new Set() });
+      }
+      programMap.get(key)!.collegeIds.add(s.college_id);
+    }
+
+    // Sort by college count descending, take top 5
+    const programs = [...programMap.entries()]
+      .map(([name, { category, collegeIds }]) => ({
+        name,
+        category,
+        collegeCount: collegeIds.size,
+      }))
+      .sort((a, b) => b.collegeCount - a.collegeCount)
+      .slice(0, 5);
+
+    const response = NextResponse.json({
+      colleges: collegeResult.data || [],
+      programs,
+    });
+    response.headers.set(
+      "Cache-Control",
+      "public, s-maxage=300, stale-while-revalidate=3600"
+    );
     return response;
   } catch (error) {
     console.error("Error in autocomplete:", error);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { sanitizeFilterValue } from "@/lib/utils";
+import { mapCollegeRow } from "@/lib/map-college";
 
 // ── Parsed filter parameters ──────────────────────────────────────────────────
 interface FilterParams {
@@ -19,6 +20,7 @@ interface FilterParams {
   enrollmentMax: string | null;
   jesuitOnly: string | null;
   programCollegeIds: string[] | null;
+  searchProgramCollegeIds: string[] | null;
 }
 
 // ── Apply all filters to a Supabase query builder ─────────────────────────────
@@ -33,9 +35,15 @@ function applyFilters<T extends Record<string, any>>(
     const safe = sanitizeFilterValue(f.query);
     if (safe) {
       const like = `%${safe}%`;
-      q = q.or(
-        `name.ilike.${like},city.ilike.${like},state.ilike.${like},region.ilike.${like},type.ilike.${like},description.ilike.${like},website.ilike.${like}`,
-      ) as T;
+      let orParts = `name.ilike.${like},city.ilike.${like},state.ilike.${like},region.ilike.${like},type.ilike.${like},description.ilike.${like},website.ilike.${like}`;
+
+      // Include colleges that offer matching programs (OR expansion)
+      if (f.searchProgramCollegeIds && f.searchProgramCollegeIds.length > 0) {
+        const idList = f.searchProgramCollegeIds.join(",");
+        orParts += `,id.in.(${idList})`;
+      }
+
+      q = q.or(orParts) as T;
     }
   }
 
@@ -137,6 +145,26 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // If text query matches program names, get those college IDs for OR expansion
+    let searchProgramCollegeIds: string[] | null = null;
+    if (query) {
+      const safe = sanitizeFilterValue(query);
+      if (safe && safe.length >= 2) {
+        const { data: programMatches } = await supabase
+          .from("schools")
+          .select("college_id")
+          .ilike("name", `%${safe}%`)
+          .limit(1000);
+        if (programMatches && programMatches.length > 0) {
+          searchProgramCollegeIds = [
+            ...new Set(
+              programMatches.map((s: { college_id: string }) => s.college_id)
+            ),
+          ];
+        }
+      }
+    }
+
     // Shared filter params — parsed once, used for every query
     const filters: FilterParams = {
       query,
@@ -154,6 +182,7 @@ export async function GET(request: NextRequest) {
       enrollmentMax: searchParams.get("enrollmentMax"),
       jesuitOnly: searchParams.get("jesuitOnly"),
       programCollegeIds,
+      searchProgramCollegeIds,
     };
 
     // Sorting
@@ -189,7 +218,7 @@ export async function GET(request: NextRequest) {
 
       const start = (page - 1) * limit;
       return cachedJson({
-        colleges: sorted.slice(start, start + limit),
+        colleges: sorted.slice(start, start + limit).map(mapCollegeRow),
         total: count || 0,
       });
     }
@@ -207,7 +236,7 @@ export async function GET(request: NextRequest) {
       const { data, count, error } = await dbQuery;
       if (error) throw error;
       return cachedJson({
-        colleges: data || [],
+        colleges: (data || []).map(mapCollegeRow),
         total: count || 0,
       });
     }
@@ -237,7 +266,7 @@ export async function GET(request: NextRequest) {
     }
 
     return cachedJson({
-      colleges: allData,
+      colleges: allData.map((row) => mapCollegeRow(row as Record<string, unknown>)),
       total: totalCount,
     });
   } catch (error) {

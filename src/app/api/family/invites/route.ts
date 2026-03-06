@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { sendFamilyInviteEmail } from "@/lib/email";
 
 export async function GET() {
   try {
@@ -118,6 +119,73 @@ export async function DELETE(request: NextRequest) {
     console.error("Error deleting invite:", error);
     return NextResponse.json(
       { error: "Failed to delete invite" },
+      { status: 500 },
+    );
+  }
+}
+
+/**
+ * POST /api/family/invites  { inviteId }
+ * Resend the invite email for an existing pending invite.
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { inviteId } = await request.json();
+    if (!inviteId) {
+      return NextResponse.json({ error: "inviteId is required" }, { status: 400 });
+    }
+
+    const service = createServiceClient();
+
+    // Fetch the invite — must belong to the current user and be unclaimed
+    const { data: invite, error } = await service
+      .from("family_invites")
+      .select("id, inviter_type, invited_email, token, expires_at, claimed")
+      .eq("id", inviteId)
+      .eq("inviter_id", user.id)
+      .eq("claimed", false)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!invite) {
+      return NextResponse.json({ error: "Invite not found" }, { status: 404 });
+    }
+
+    if (new Date(invite.expires_at) <= new Date()) {
+      return NextResponse.json({ error: "Invite has expired" }, { status: 410 });
+    }
+
+    // Get inviter's display name
+    const { data: profile } = await service
+      .from("profiles")
+      .select("display_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    // Fire-and-forget email
+    sendFamilyInviteEmail({
+      to: invite.invited_email,
+      inviterName: profile?.display_name ?? null,
+      inviterType: invite.inviter_type as "parent" | "student",
+      token: invite.token,
+      expiresAt: invite.expires_at,
+    });
+
+    return NextResponse.json({ message: "Invite email resent" });
+  } catch (error) {
+    console.error("Error resending invite:", error);
+    return NextResponse.json(
+      { error: "Failed to resend invite" },
       { status: 500 },
     );
   }

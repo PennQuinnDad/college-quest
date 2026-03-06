@@ -5,6 +5,7 @@ import { NextRequest } from "next/server";
 
 const mockGetUser = vi.fn();
 const mockServiceFrom = vi.fn();
+const mockSendFamilyInviteEmail = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn().mockResolvedValue({
@@ -13,6 +14,10 @@ vi.mock("@/lib/supabase/server", () => ({
   createServiceClient: () => ({
     from: (...args: unknown[]) => mockServiceFrom(...args),
   }),
+}));
+
+vi.mock("@/lib/email", () => ({
+  sendFamilyInviteEmail: (...args: unknown[]) => mockSendFamilyInviteEmail(...args),
 }));
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -150,6 +155,47 @@ describe("POST /api/family/invite", () => {
     const body = await res.json();
     expect(body.token).toBeDefined();
     expect(body.invitedEmail).toBe("child@test.com");
+  });
+
+  it("calls sendFamilyInviteEmail on successful creation", async () => {
+    mockGetUser.mockResolvedValue(authedUser());
+
+    let callCount = 0;
+    mockServiceFrom.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return chain({ data: { account_type: "parent", display_name: "Dad" } });
+      }
+      if (callCount === 2) {
+        return chain({ data: null });
+      }
+      if (callCount === 3) {
+        return chain({
+          data: { id: "inv-1", token: "tok-abc", expires_at: "2026-03-01T00:00:00Z" },
+        });
+      }
+      return chain({ data: null });
+    });
+
+    await POST(makeRequest({ email: "child@test.com" }));
+    expect(mockSendFamilyInviteEmail).toHaveBeenCalledOnce();
+    expect(mockSendFamilyInviteEmail).toHaveBeenCalledWith({
+      to: "child@test.com",
+      inviterName: "Dad",
+      inviterType: "parent",
+      token: "tok-abc",
+      expiresAt: "2026-03-01T00:00:00Z",
+    });
+  });
+
+  it("does not send email when invite creation fails", async () => {
+    mockGetUser.mockResolvedValue(authedUser());
+    // Missing profile → 400
+    mockServiceFrom.mockReturnValue(chain({ data: null, error: null }));
+
+    const res = await POST(makeRequest({ email: "other@test.com" }));
+    expect(res.status).toBe(400);
+    expect(mockSendFamilyInviteEmail).not.toHaveBeenCalled();
   });
 });
 

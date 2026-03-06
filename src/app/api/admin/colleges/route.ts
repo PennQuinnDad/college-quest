@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { verifyAdmin } from "@/lib/admin-auth";
 import { sanitizeFilterValue } from "@/lib/utils";
+import { mapCollegeRow } from "@/lib/map-college";
 import { v4 as uuidv4 } from "uuid";
 
 export async function GET(request: NextRequest) {
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
     const { data, count, error } = await dbQuery;
     if (error) throw error;
 
-    return NextResponse.json({ colleges: data || [], total: count || 0 });
+    return NextResponse.json({ colleges: (data || []).map(mapCollegeRow), total: count || 0 });
   } catch (error) {
     console.error("Error fetching admin colleges:", error);
     return NextResponse.json(
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json(data, { status: 201 });
+    return NextResponse.json(mapCollegeRow(data as Record<string, unknown>), { status: 201 });
   } catch (error) {
     console.error("Error creating college:", error);
     return NextResponse.json(
