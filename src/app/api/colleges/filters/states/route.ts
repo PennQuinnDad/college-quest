@@ -5,17 +5,26 @@ export async function GET() {
   try {
     const supabase = createServiceClient();
 
-    const { data, error } = await supabase
-      .from("colleges")
-      .select("state")
-      .not("state", "is", null)
-      .limit(10000);
+    // Supabase caps responses at 1000 rows — paginate to get all colleges
+    const allStates = new Set<string>();
+    let offset = 0;
+    while (true) {
+      const { data, error } = await supabase
+        .from("colleges")
+        .select("state")
+        .not("state", "is", null)
+        .order("state")
+        .range(offset, offset + 999);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      for (const row of data) {
+        if (row.state) allStates.add(row.state as string);
+      }
+      if (data.length < 1000) break;
+      offset += 1000;
+    }
 
-    if (error) throw error;
-
-    const states = [...new Set(
-      (data || []).map((row) => row.state as string).filter(Boolean)
-    )].sort();
+    const states = [...allStates].sort();
 
     const response = NextResponse.json(states);
     response.headers.set("Cache-Control", "public, s-maxage=86400, stale-while-revalidate=86400");

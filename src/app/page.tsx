@@ -30,6 +30,7 @@ import { CollegeCard } from "@/components/college-card";
 import { CollegeTable } from "@/components/college-table";
 import { useFolders } from "@/hooks/use-folders";
 import { useClickOutside } from "@/hooks/use-click-outside";
+import { FilterMultiSelect } from "@/components/ui/filter-multi-select";
 import { useUser } from "@/hooks/use-user";
 const CollegeMapView = dynamic(() => import("@/components/college-map-view"), {
   ssr: false,
@@ -147,6 +148,22 @@ function HomePageContent() {
   const folderDropdownRef = useRef<HTMLDivElement>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [folderDropdownOpen, setFolderDropdownOpen] = useState(false);
+  const [viewportCollegeIds, setViewportCollegeIds] = useState<string[]>([]);
+  // Debounced copy of viewportCollegeIds for the program-counts query so we
+  // don't fire a POST on every tiny pan.
+  const [debouncedViewportIds, setDebouncedViewportIds] = useState<string[]>([]);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedViewportIds(viewportCollegeIds), 500);
+    return () => clearTimeout(t);
+  }, [viewportCollegeIds]);
+  const [inViewDropdownOpen, setInViewDropdownOpen] = useState(false);
+  const [inViewCopied, setInViewCopied] = useState(false);
+  const [favoritingInView, setFavoritingInView] = useState(false);
+  const inViewRef = useRef<HTMLDivElement>(null);
+  const [savedMapView, setSavedMapView] = useState<{
+    center: [number, number];
+    zoom: number;
+  } | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<HTMLDivElement>(null);
@@ -167,8 +184,10 @@ function HomePageContent() {
   // ---- Dropdown click-outside & Escape ----
   const closeCopyDropdown = useCallback(() => setCopyDropdownOpen(false), []);
   const closeFolderDropdown = useCallback(() => setFolderDropdownOpen(false), []);
+  const closeInViewDropdown = useCallback(() => setInViewDropdownOpen(false), []);
   useClickOutside(copyDropdownRef, closeCopyDropdown, copyDropdownOpen);
   useClickOutside(folderDropdownRef, closeFolderDropdown, folderDropdownOpen);
+  useClickOutside(inViewRef, closeInViewDropdown, inViewDropdownOpen);
 
   // ---- Push new params to URL ----
   const updateParams = useCallback(
@@ -176,6 +195,13 @@ function HomePageContent() {
       const next = { ...params, ...updates };
       // Reset page when filters change (unless page is specifically being set)
       if (!("page" in updates)) next.page = 1;
+      // Clear viewport when filter params change (not just page navigation)
+      const filterKeys = ["query", "states", "regions", "types", "sizes", "acceptanceRanges", "jesuitOnly", "programCategories", "favoriteIds"];
+      const hasFilterChange = Object.keys(updates).some((k) => filterKeys.includes(k));
+      if (hasFilterChange) {
+        setViewportCollegeIds([]);
+        setSavedMapView(null);
+      }
       const qs = buildQueryString(next);
       router.push(qs ? `/?${qs}` : "/", { scroll: false });
     },
@@ -320,7 +346,9 @@ function HomePageContent() {
     staleTime: filterStaleTime,
   });
 
-  const { data: programCategoryOptions = [] } = useQuery<string[]>({
+  const { data: programCategoryData = [] } = useQuery<
+    { name: string; count: number }[]
+  >({
     queryKey: ["filter-program-categories"],
     queryFn: async () => {
       const res = await fetch("/api/schools/categories");
@@ -328,6 +356,43 @@ function HomePageContent() {
     },
     staleTime: filterStaleTime,
   });
+
+  // Viewport-filtered program counts — only fetched when the map viewport is
+  // active and there are colleges in view.
+  const { data: viewportProgramCategoryData } = useQuery<
+    { name: string; count: number }[]
+  >({
+    queryKey: ["filter-program-categories-viewport", debouncedViewportIds],
+    queryFn: async () => {
+      const res = await fetch("/api/schools/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ collegeIds: debouncedViewportIds }),
+      });
+      return res.json();
+    },
+    enabled: debouncedViewportIds.length > 0,
+    staleTime: 30_000,
+  });
+
+  const programCategoryOptions = useMemo(
+    () => programCategoryData.map((c) => c.name),
+    [programCategoryData],
+  );
+  const programCategoryCounts = useMemo(() => {
+    // Use viewport-filtered counts when the viewport is active.
+    // Start from global counts so every category always appears,
+    // then overlay with viewport-specific numbers (missing = 0).
+    if (debouncedViewportIds.length > 0 && viewportProgramCategoryData) {
+      const viewportMap = Object.fromEntries(
+        viewportProgramCategoryData.map((c) => [c.name, c.count]),
+      );
+      return Object.fromEntries(
+        programCategoryData.map((c) => [c.name, viewportMap[c.name] ?? 0]),
+      );
+    }
+    return Object.fromEntries(programCategoryData.map((c) => [c.name, c.count]));
+  }, [programCategoryData, viewportProgramCategoryData, debouncedViewportIds.length]);
 
   // ---- Colleges query ----
   const collegeQueryParams = useMemo(() => {
@@ -339,13 +404,13 @@ function HomePageContent() {
     } else if (showFavoritesOnly && favoriteIds.size > 0) {
       p.favoriteIds = Array.from(favoriteIds).join(",");
     }
-    // Map view needs all results (up to 5000), not a single page
-    if (viewMode === "map") {
+    // Map view or active viewport filter needs all results (up to 5000)
+    if (viewMode === "map" || viewportCollegeIds.length > 0) {
       p.limit = 5000;
       p.page = 1;
     }
     return p;
-  }, [params, showFavoritesOnly, favoriteIds, viewMode, selectedFolderId, folderItemIds]);
+  }, [params, showFavoritesOnly, favoriteIds, viewMode, selectedFolderId, folderItemIds, viewportCollegeIds.length]);
 
   const { data: collegesData, isLoading: collegesLoading, error: collegesError } = useQuery<{
     colleges: College[];
@@ -365,6 +430,25 @@ function HomePageContent() {
   const currentPage = params.page || 1;
   const pageSize = params.limit || 48;
   const totalPages = Math.max(1, Math.ceil(totalResults / pageSize));
+
+  // ---- Viewport-filtered display colleges ----
+  const viewportActive = viewportCollegeIds.length > 0;
+
+  const displayColleges = useMemo(() => {
+    if (!viewportActive || viewMode === "map") return colleges;
+    const viewportSet = new Set(viewportCollegeIds);
+    return colleges.filter((c) => viewportSet.has(c.id));
+  }, [colleges, viewportCollegeIds, viewportActive, viewMode]);
+
+  const paginatedColleges = useMemo(() => {
+    if (!viewportActive || viewMode === "map") return colleges;
+    const start = (currentPage - 1) * pageSize;
+    return displayColleges.slice(start, start + pageSize);
+  }, [displayColleges, viewportActive, viewMode, currentPage, pageSize, colleges]);
+
+  const displayTotalPages = viewportActive && viewMode !== "map"
+    ? Math.max(1, Math.ceil(displayColleges.length / pageSize))
+    : totalPages;
 
   // ---- Autocomplete ----
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
@@ -543,6 +627,8 @@ function HomePageContent() {
     setSearchInput("");
     setShowFavoritesOnly(false);
     setSelectedFolderId(null);
+    setViewportCollegeIds([]);
+    setSavedMapView(null);
   }
 
   // ---- Saved filters ----
@@ -666,15 +752,80 @@ function HomePageContent() {
     }
   }
 
+  // ---- In-view actions ----
+  const handleViewportCollegesChange = useCallback((ids: string[]) => {
+    setViewportCollegeIds(ids);
+  }, []);
+
+  const handleMapViewportMove = useCallback((view: { center: [number, number]; zoom: number }) => {
+    setSavedMapView(view);
+  }, []);
+
+  async function favoriteAllInView() {
+    const toAdd = viewportCollegeIds.filter((id) => !favoriteIds.has(id));
+    if (toAdd.length === 0) {
+      setInViewDropdownOpen(false);
+      return;
+    }
+    setFavoritingInView(true);
+    try {
+      await Promise.all(
+        toAdd.map((collegeId) =>
+          fetch("/api/favorites", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ collegeId }),
+          })
+        )
+      );
+      queryClient.invalidateQueries({ queryKey: ["favorites"] });
+    } catch (err) {
+      console.error("Error favoriting in view:", err);
+    } finally {
+      setFavoritingInView(false);
+      setInViewDropdownOpen(false);
+    }
+  }
+
+  function compareInView() {
+    const ids = viewportCollegeIds.slice(0, 20);
+    setInViewDropdownOpen(false);
+    router.push(`/compare?source=viewport&ids=${ids.join(",")}`);
+  }
+
+  async function copyInViewForAI(platform: AIPlatform) {
+    const inViewSet = new Set(viewportCollegeIds);
+    const list = colleges.filter((c) => inViewSet.has(c.id));
+    const prompt = AI_PROMPTS[platform];
+    let text: string;
+    if (list.length === 0) {
+      text = "# Colleges in View\n\nNo colleges currently in view.";
+    } else {
+      text = `# Colleges in View (${list.length})\n\n${prompt.intro}\n${buildCollegeMarkdown(list)}\n---\n\n${prompt.closing}`;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setInViewCopied(true);
+      setInViewDropdownOpen(false);
+      setTimeout(() => setInViewCopied(false), 2000);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   // ---- Store search result IDs in sessionStorage for detail page nav ----
+  // When a viewport filter is active (and not in map mode), store the
+  // viewport-filtered subset so prev/next on the detail page reflects what the
+  // user sees, not the full 5 000-college dataset.
   useEffect(() => {
-    if (colleges.length > 0) {
+    const source = viewportActive && viewMode !== "map" ? displayColleges : colleges;
+    if (source.length > 0) {
       sessionStorage.setItem(
         "cq-search-results",
-        JSON.stringify(colleges.map((c) => c.id))
+        JSON.stringify(source.map((c) => c.id))
       );
     }
-  }, [colleges]);
+  }, [colleges, displayColleges, viewportActive, viewMode]);
 
   // ---- Render helpers ----
   const sortIcon = params.sortOrder === "asc" ? <FaIcon icon="arrow-up" className="text-xs" /> : <FaIcon icon="arrow-down" className="text-xs" />;
@@ -876,14 +1027,14 @@ function HomePageContent() {
               </div>
             )}
 
-            {/* Compare link */}
-            {user && favoriteIds.size >= 2 && (
+            {/* Tours link */}
+            {user && (
               <a
-                href="/compare"
+                href="/tours"
                 className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
-                <FaIcon icon="scale-balanced" style="duotone" className="text-sm" />
-                <span className="hidden sm:inline">Compare</span>
+                <FaIcon icon="route" style="duotone" className="text-sm" />
+                <span className="hidden sm:inline">Tours</span>
               </a>
             )}
 
@@ -1201,6 +1352,7 @@ function HomePageContent() {
           <FilterMultiSelect
             label="Program"
             options={programCategoryOptions}
+            counts={programCategoryCounts}
             selected={
               params.programCategories
                 ? params.programCategories
@@ -1320,6 +1472,11 @@ function HomePageContent() {
                 {collegesLoading
                   ? "Loading..."
                   : `${formatNumber(totalResults)} college${totalResults !== 1 ? "s" : ""} found`}
+                {!collegesLoading && viewportActive && (
+                  <span className="text-base font-medium text-muted-foreground ml-1.5">
+                    ({formatNumber(viewportCollegeIds.length)} in view)
+                  </span>
+                )}
               </h1>
               {!collegesLoading && activeFilters.length > 0 && (
                 <span className="text-sm text-muted-foreground">
@@ -1343,6 +1500,21 @@ function HomePageContent() {
                     : "Showing favorites"}
                 </Badge>
               )}
+              {viewportActive && viewMode !== "map" && (
+                <Badge variant="outline" className="text-indigo-700 border-indigo-300 bg-indigo-50 gap-1">
+                  <FaIcon icon="map-pin" style="duotone" className="text-[10px]" />
+                  Map area
+                  <button
+                    onClick={() => {
+                      setViewportCollegeIds([]);
+                      setSavedMapView(null);
+                    }}
+                    className="ml-0.5 rounded-full p-0.5 hover:bg-indigo-200 transition-colors"
+                  >
+                    <FaIcon icon="xmark" className="text-[10px]" />
+                  </button>
+                </Badge>
+              )}
             </div>
             {recentlyViewed.length > 0 && (
               <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
@@ -1364,6 +1536,103 @@ function HomePageContent() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* In View actions (map mode only) */}
+            {user && viewportActive && (
+              <div ref={inViewRef} className="relative">
+                <button
+                  onClick={() => setInViewDropdownOpen((prev) => !prev)}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-white px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:border-gray-400"
+                >
+                  <FaIcon icon="map-pin" style="duotone" className="text-xs" />
+                  In View ({viewportCollegeIds.length})
+                  <FaIcon icon="chevron-down" className="text-[10px] opacity-60" />
+                </button>
+                {inViewDropdownOpen && (
+                  <div className="absolute right-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-lg border border-border bg-white shadow-lg">
+                    <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Actions for {viewportCollegeIds.length} in view
+                    </div>
+                    <button
+                      onClick={favoriteAllInView}
+                      disabled={favoritingInView}
+                      className="flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      <FaIcon icon="heart" style="duotone" className="text-base text-muted-foreground" />
+                      {favoritingInView ? "Adding..." : "Favorite All"}
+                    </button>
+                    <button
+                      onClick={compareInView}
+                      className="flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-gray-50"
+                    >
+                      <FaIcon icon="scale-balanced" style="duotone" className="text-base text-muted-foreground" />
+                      Compare
+                    </button>
+                    <div className="border-t border-border">
+                      <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Copy for AI
+                      </div>
+                      <button
+                        onClick={() => copyInViewForAI("chatgpt")}
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-gray-50"
+                      >
+                        <FaIcon icon="openai" style="brands" className="text-base text-muted-foreground" />
+                        {inViewCopied ? "Copied!" : "ChatGPT"}
+                      </button>
+                      <button
+                        onClick={() => copyInViewForAI("gemini")}
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-gray-50"
+                      >
+                        <FaIcon icon="google" style="brands" className="text-base text-muted-foreground" />
+                        {inViewCopied ? "Copied!" : "Google Gemini"}
+                      </button>
+                      <button
+                        onClick={() => copyInViewForAI("claude")}
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-gray-50"
+                      >
+                        <FaIcon icon="message-bot" style="duotone" className="text-base text-muted-foreground" />
+                        {inViewCopied ? "Copied!" : "Claude"}
+                      </button>
+                    </div>
+                    <div className="border-t border-border">
+                      <button
+                        onClick={() => {
+                          setViewportCollegeIds([]);
+                          setSavedMapView(null);
+                          setInViewDropdownOpen(false);
+                        }}
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-red-600 transition-colors hover:bg-red-50"
+                      >
+                        <FaIcon icon="xmark-circle" style="duotone" className="text-base" />
+                        Show All Colleges
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Compare colleges from current results */}
+            {user && (showFavoritesOnly || selectedFolderId) && totalResults >= 2 && (
+              <a
+                href={`/compare?source=${selectedFolderId ? "folder" : "favorites"}${selectedFolderId ? `&folderId=${selectedFolderId}` : ""}`}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-white px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:border-gray-400"
+              >
+                <FaIcon icon="scale-balanced" style="duotone" className="text-xs" />
+                Compare ({totalResults})
+              </a>
+            )}
+
+            {/* Create tour from current results */}
+            {user && (showFavoritesOnly || selectedFolderId) && totalResults > 0 && (
+              <a
+                href={`/tours?create=true&source=${selectedFolderId ? "folder" : "favorites"}${selectedFolderId ? `&folderId=${selectedFolderId}` : ""}`}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-white px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:border-gray-400"
+              >
+                <FaIcon icon="route" style="duotone" className="text-xs" />
+                Create Tour ({totalResults})
+              </a>
+            )}
+
             {/* Sort (hidden in table view — headers handle sorting) */}
             {viewMode !== "table" && (
               <div className="flex items-center gap-1.5">
@@ -1412,6 +1681,11 @@ function HomePageContent() {
                   onClick={() => {
                     setViewMode(mode);
                     localStorage.setItem("cq-view-mode", mode);
+                    // Reset to page 1 when switching view modes with an
+                    // active viewport so we don't land on an out-of-range page
+                    if (viewportActive && currentPage > 1) {
+                      updateParams({ page: 1 });
+                    }
                   }}
                   title={label}
                   className={cn(
@@ -1469,7 +1743,7 @@ function HomePageContent() {
             {/* TABLE VIEW */}
             {viewMode === "table" && (
               <CollegeTable
-                colleges={colleges}
+                colleges={paginatedColleges}
                 sortBy={params.sortBy || "name"}
                 sortOrder={params.sortOrder || "asc"}
                 onSort={(sb, so) => updateParams({ sortBy: sb, sortOrder: so })}
@@ -1482,7 +1756,7 @@ function HomePageContent() {
             {/* GRID VIEW */}
             {viewMode === "grid" && (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {colleges.map((college) => (
+                {paginatedColleges.map((college) => (
                   <CollegeCard
                     key={college.id}
                     college={college}
@@ -1497,7 +1771,7 @@ function HomePageContent() {
             {/* LIST VIEW */}
             {viewMode === "list" && (
               <div className="flex flex-col gap-3">
-                {colleges.map((college) => (
+                {paginatedColleges.map((college) => (
                   <Card
                     key={college.id}
                     className="transition-shadow hover:shadow-md"
@@ -1595,13 +1869,17 @@ function HomePageContent() {
                 onToggleFavorite={(id) => toggleFavoriteMutation.mutate(id)}
                 user={user}
                 isFiltered={!!(params.query || params.states || params.regions || params.types || params.sizes || params.acceptanceRanges || params.jesuitOnly || params.programCategories || showFavoritesOnly || selectedFolderId)}
+                onViewportCollegesChange={handleViewportCollegesChange}
+                initialCenter={savedMapView?.center}
+                initialZoom={savedMapView?.zoom}
+                onMapMove={handleMapViewportMove}
               />
             )}
 
             {/* ============================================================ */}
             {/* PAGINATION                                                     */}
             {/* ============================================================ */}
-            {viewMode !== "map" && totalPages > 1 && (
+            {viewMode !== "map" && displayTotalPages > 1 && (
               <div className="mt-6 flex items-center justify-center gap-2">
                 <Button
                   variant="outline"
@@ -1615,7 +1893,7 @@ function HomePageContent() {
                 </Button>
 
                 <div className="flex items-center gap-1">
-                  {generatePageNumbers(currentPage, totalPages).map(
+                  {generatePageNumbers(currentPage, displayTotalPages).map(
                     (page, idx) =>
                       page === "..." ? (
                         <span
@@ -1644,7 +1922,7 @@ function HomePageContent() {
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={currentPage >= totalPages}
+                  disabled={currentPage >= displayTotalPages}
                   onClick={() => updateParams({ page: currentPage + 1 })}
                   className="gap-1"
                 >
@@ -1656,118 +1934,6 @@ function HomePageContent() {
           </>
         )}
       </main>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// FilterMultiSelect - scrollable multi-value filter dropdown
-// ---------------------------------------------------------------------------
-
-function FilterMultiSelect({
-  label,
-  options,
-  selected,
-  onToggle,
-}: {
-  label: string;
-  icon?: React.ReactNode;
-  options: string[];
-  selected: string[];
-  onToggle: (value: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [filterText, setFilterText] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
-  const closeFilter = useCallback(() => {
-    setOpen(false);
-    setFilterText("");
-  }, []);
-  useClickOutside(ref, closeFilter, open);
-
-  const filtered = filterText
-    ? options.filter((o) =>
-        o.toLowerCase().includes(filterText.toLowerCase())
-      )
-    : options;
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(!open)}
-        className={cn(
-          "flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm transition-colors whitespace-nowrap",
-          selected.length > 0
-            ? "border-primary bg-primary/5 text-primary font-medium"
-            : "border-border bg-white text-muted-foreground hover:border-gray-400 hover:text-foreground"
-        )}
-      >
-        <span>
-          {selected.length === 0
-            ? label
-            : selected.length === 1
-              ? selected[0]
-              : `${label} (${selected.length})`}
-        </span>
-        <FaIcon
-          icon="chevron-down"
-          className={cn(
-            "text-[10px] shrink-0 transition-transform",
-            open && "rotate-180"
-          )}
-        />
-      </button>
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 min-w-[200px] overflow-hidden rounded-lg border border-border bg-white shadow-lg">
-          {options.length > 8 && (
-            <div className="p-2 border-b border-border">
-              <input
-                type="text"
-                value={filterText}
-                onChange={(e) => setFilterText(e.target.value)}
-                placeholder={`Search ${label.toLowerCase()}...`}
-                className="h-8 w-full rounded-md border border-border px-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                autoFocus
-              />
-            </div>
-          )}
-          <div className="max-h-56 overflow-y-auto p-1">
-            {filtered.length === 0 ? (
-              <div className="px-3 py-2 text-sm text-muted-foreground">
-                No options found
-              </div>
-            ) : (
-              filtered.map((option) => {
-                const isSelected = selected.includes(option);
-                return (
-                  <button
-                    key={option}
-                    onClick={() => onToggle(option)}
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded-sm px-3 py-1.5 text-sm transition-colors text-left",
-                      isSelected
-                        ? "bg-amber-50 text-foreground"
-                        : "text-foreground hover:bg-gray-50"
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-colors",
-                        isSelected
-                          ? "border-primary bg-primary text-white"
-                          : "border-gray-300"
-                      )}
-                    >
-                      {isSelected && <FaIcon icon="check" className="text-[10px]" />}
-                    </div>
-                    <span className="truncate">{option}</span>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

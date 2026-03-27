@@ -64,6 +64,10 @@ interface CollegeMapViewProps {
   onToggleFavorite: (collegeId: string) => void;
   user: UserProfile | null | undefined;
   isFiltered?: boolean;
+  onViewportCollegesChange?: (ids: string[]) => void;
+  initialCenter?: [number, number];
+  initialZoom?: number;
+  onMapMove?: (view: { center: [number, number]; zoom: number }) => void;
 }
 
 function FitBounds({ colleges }: { colleges: College[] }) {
@@ -85,17 +89,32 @@ function FitBounds({ colleges }: { colleges: College[] }) {
 
 function MapViewportTracker({
   onViewportChange,
+  onMapMove,
 }: {
   onViewportChange: (zoom: number, bounds: L.LatLngBounds) => void;
+  onMapMove?: (view: { center: [number, number]; zoom: number }) => void;
 }) {
   const map = useMapEvents({
     moveend: () => {
       onViewportChange(map.getZoom(), map.getBounds());
+      const c = map.getCenter();
+      onMapMove?.({ center: [c.lat, c.lng], zoom: map.getZoom() });
     },
     zoomend: () => {
       onViewportChange(map.getZoom(), map.getBounds());
+      const c = map.getCenter();
+      onMapMove?.({ center: [c.lat, c.lng], zoom: map.getZoom() });
     },
   });
+
+  // Fire once on mount so the parent gets the initial viewport
+  useEffect(() => {
+    onViewportChange(map.getZoom(), map.getBounds());
+    const c = map.getCenter();
+    onMapMove?.({ center: [c.lat, c.lng], zoom: map.getZoom() });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return null;
 }
 
@@ -106,6 +125,10 @@ export default function CollegeMapView({
   onToggleFavorite,
   user,
   isFiltered = false,
+  onViewportCollegesChange,
+  initialCenter,
+  initialZoom,
+  onMapMove,
 }: CollegeMapViewProps) {
   const mappableColleges = useMemo(
     () => colleges.filter((c) => c.latitude != null && c.longitude != null),
@@ -145,6 +168,19 @@ export default function CollegeMapView({
     );
   }, [viewport, mappableColleges, isFiltered]);
 
+  // Colleges actually visible in the current map viewport (always bounds-based)
+  const viewportBoundColleges = useMemo(() => {
+    if (!viewport) return [];
+    return mappableColleges.filter((c) =>
+      viewport.bounds.contains(L.latLng(c.latitude!, c.longitude!))
+    );
+  }, [viewport, mappableColleges]);
+
+  // Expose viewport-visible college IDs to parent (always uses real bounds)
+  useEffect(() => {
+    onViewportCollegesChange?.(viewportBoundColleges.map((c) => c.id));
+  }, [viewportBoundColleges, onViewportCollegesChange]);
+
   if (isLoading) {
     return (
       <div className="flex h-[600px] items-center justify-center rounded-xl border border-border bg-gray-50">
@@ -165,8 +201,8 @@ export default function CollegeMapView({
     <div>
       <div className="overflow-hidden rounded-xl border border-border shadow-sm">
         <MapContainer
-          center={[39.8283, -98.5795]}
-          zoom={4}
+          center={initialCenter ?? [39.8283, -98.5795]}
+          zoom={initialZoom ?? 4}
           scrollWheelZoom={true}
           className="h-[600px] w-full"
           style={{ zIndex: 0 }}
@@ -191,8 +227,8 @@ export default function CollegeMapView({
               />
             </LayersControl.BaseLayer>
           </LayersControl>
-          {isFiltered && <FitBounds colleges={mappableColleges} />}
-          <MapViewportTracker onViewportChange={handleViewportChange} />
+          {isFiltered && !initialCenter && <FitBounds colleges={mappableColleges} />}
+          <MapViewportTracker onViewportChange={handleViewportChange} onMapMove={onMapMove} />
           <MarkerClusterGroup chunkedLoading iconCreateFunction={createClusterIcon}>
             {mappableColleges.map((college) => (
               <Marker

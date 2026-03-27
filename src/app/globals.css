@@ -49,3 +49,22 @@
     font-family: var(--font-sans);
   }
 }
+
+/* Print styles for tour itineraries */
+@media print {
+  body {
+    background: white !important;
+    font-size: 12px !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+  header {
+    position: static !important;
+    border-bottom: 1px solid #ddd !important;
+  }
+  .leaflet-container {
+    height: 300px !important;
+    break-inside: avoid;
+  }
+}

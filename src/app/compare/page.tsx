@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@/hooks/use-user";
 import { FaIcon } from "@/components/ui/fa-icon";
@@ -79,10 +80,34 @@ function CompareRow({
 // ---------------------------------------------------------------------------
 
 export default function ComparePage() {
+  return (
+    <Suspense>
+      <ComparePageContent />
+    </Suspense>
+  );
+}
+
+function ComparePageContent() {
   const { data: user, isLoading: userLoading } = useUser();
+  const searchParams = useSearchParams();
+  const sourceType = searchParams.get("source"); // "folder", "favorites", or "viewport"
+  const sourceFolderId = searchParams.get("folderId");
+  const viewportIds = searchParams.get("ids"); // comma-separated IDs for viewport source
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Fetch user's favorites
+  // Fetch folder items if source is a folder
+  const { data: folderItemIds } = useQuery<string[]>({
+    queryKey: ["folder-items", sourceFolderId],
+    queryFn: async () => {
+      const res = await fetch(`/api/folders/${sourceFolderId}/items`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.items || [];
+    },
+    enabled: !!sourceFolderId && sourceType === "folder",
+  });
+
+  // Fetch user's favorites (fallback when no source params)
   const { data: favoritesData } = useQuery<{ favorites: string[] }>({
     queryKey: ["favorites"],
     queryFn: async () => {
@@ -95,21 +120,30 @@ export default function ComparePage() {
 
   const favoriteIds = favoritesData?.favorites ?? [];
 
-  // Fetch college details for all favorites
+  // Determine which college IDs to use based on source
+  const sourceCollegeIds = useMemo(() => {
+    if (sourceType === "viewport" && viewportIds) {
+      return viewportIds.split(",").filter(Boolean);
+    }
+    if (sourceType === "folder" && folderItemIds) return folderItemIds;
+    return favoriteIds;
+  }, [sourceType, viewportIds, folderItemIds, favoriteIds]);
+
+  // Fetch college details for the determined IDs
   const { data: collegesData, isLoading: collegesLoading } = useQuery<{
     colleges: College[];
   }>({
-    queryKey: ["compare-colleges", favoriteIds],
+    queryKey: ["compare-colleges", sourceCollegeIds],
     queryFn: async () => {
-      if (favoriteIds.length === 0) return { colleges: [] };
+      if (sourceCollegeIds.length === 0) return { colleges: [] };
       const qs = new URLSearchParams();
-      qs.set("favoriteIds", favoriteIds.join(","));
-      qs.set("limit", String(favoriteIds.length));
+      qs.set("favoriteIds", sourceCollegeIds.join(","));
+      qs.set("limit", String(sourceCollegeIds.length));
       const res = await fetch(`/api/colleges?${qs.toString()}`);
       if (!res.ok) return { colleges: [] };
       return res.json();
     },
-    enabled: favoriteIds.length > 0,
+    enabled: sourceCollegeIds.length > 0,
   });
 
   const allColleges = useMemo(
@@ -178,14 +212,18 @@ export default function ComparePage() {
         {collegesLoading ? (
           <div className="py-20 text-center text-muted-foreground">
             <FaIcon icon="spinner" style="duotone" className="fa-spin mr-2 text-xl" />
-            <p className="mt-2 text-sm">Loading your favorites...</p>
+            <p className="mt-2 text-sm">Loading colleges...</p>
           </div>
         ) : allColleges.length === 0 ? (
           <div className="py-20 text-center">
             <FaIcon icon="scale-balanced" style="duotone" className="mb-4 text-4xl text-gray-300" />
             <h2 className="text-lg font-semibold">No Colleges to Compare</h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Favorite some colleges first, then come back to compare them side-by-side.
+              {sourceType === "viewport"
+                ? "No colleges provided. Go back to the map and select colleges in view."
+                : sourceType === "folder"
+                ? "This folder has no colleges. Add some colleges to the folder first."
+                : "Favorite some colleges first, then come back to compare them side-by-side."}
             </p>
             <Link href="/">
               <Button className="mt-6">
@@ -199,7 +237,7 @@ export default function ComparePage() {
             {/* College selector chips */}
             <div className="mb-6">
               <p className="text-xs font-medium text-muted-foreground mb-2">
-                Your favorites ({allColleges.length}):
+                {sourceType === "viewport" ? "Colleges in view" : sourceType === "folder" ? "Folder colleges" : "Your favorites"} ({allColleges.length}):
               </p>
               <div className="flex flex-wrap gap-2">
                 {allColleges.map((c) => {

@@ -246,3 +246,62 @@ export interface CollegeSuggestion {
   status: "pending" | "accepted" | "dismissed";
   createdAt: string;
 }
+
+// Campus Tours
+export interface Tour {
+  id: string;
+  userId: string;
+  name: string;
+  startDate: string | null;
+  endDate: string | null;
+  notes: string | null;
+  travelNotes: string | null;
+  sharedWithFamily: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TourDay {
+  id: string;
+  tourId: string;
+  position: number;
+  title: string | null;
+  date: string | null;
+  notes: string | null;
+  startLocation: string | null;
+  startTravelMin: number | null;
+  endLocation: string | null;
+  endTravelMin: number | null;
+  departureTime: number | null;
+  startLatitude: number | null;
+  startLongitude: number | null;
+  endLatitude: number | null;
+  endLongitude: number | null;
+}
+
+export interface TourStop {
+  id: string;
+  tourDayId: string;
+  collegeId: string;
+  position: number;
+  visitTime: string | null;
+  notes: string | null;
+}
+
+export interface TourStopWithCollege extends TourStop {
+  college: College;
+}
+
+export interface TourDayWithStops extends TourDay {
+  stops: TourStopWithCollege[];
+}
+
+export interface TourWithDays extends Tour {
+  days: TourDayWithStops[];
+}
+
+export interface TourSummary extends Tour {
+  dayCount: number;
+  stopCount: number;
+  states: string[];
+}

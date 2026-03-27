@@ -722,12 +722,12 @@ export default function CollegeDetailPage({
         {/* ================================================================ */}
         {/* TWO-COLUMN GRID LAYOUT                                           */}
         {/* ================================================================ */}
+        {/* Notes — full-width, above the two-column grid */}
+        {user && <div className="mb-6"><CollegeNotes collegeId={id} user={user} /></div>}
+
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Left column */}
           <div className="space-y-6">
-            {/* Notes */}
-            {user && <CollegeNotes collegeId={id} user={user} />}
-
             {/* About */}
             <Card>
               <CardHeader className="pb-3">

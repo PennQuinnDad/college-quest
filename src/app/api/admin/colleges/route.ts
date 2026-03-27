@@ -19,6 +19,27 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get("sortBy") || "name";
     const sortOrder = searchParams.get("sortOrder") || "asc";
 
+    // Filter params
+    const states = searchParams.get("states");
+    const regions = searchParams.get("regions");
+    const types = searchParams.get("types");
+    const sizes = searchParams.get("sizes");
+    const acceptanceRanges = searchParams.get("acceptanceRanges");
+    const programCategories = searchParams.get("programCategories");
+
+    // If filtering by program categories, find matching college IDs
+    let programCollegeIds: string[] | null = null;
+    if (programCategories) {
+      const categories = programCategories.split(",").map((c) => c.trim());
+      const { data: schools } = await supabase
+        .from("schools")
+        .select("college_id")
+        .in("category", categories);
+      if (schools) {
+        programCollegeIds = [...new Set(schools.map((s) => s.college_id))];
+      }
+    }
+
     let dbQuery = supabase.from("colleges").select("*", { count: "exact" });
 
     if (query) {
@@ -28,6 +49,35 @@ export async function GET(request: NextRequest) {
           `name.ilike.%${safe}%,city.ilike.%${safe}%,state.ilike.%${safe}%`
         );
       }
+    }
+
+    // Apply filters
+    if (states) dbQuery = dbQuery.in("state", states.split(",").map((s) => s.trim()));
+    if (regions) dbQuery = dbQuery.in("region", regions.split(",").map((r) => r.trim()));
+    if (types) dbQuery = dbQuery.in("type", types.split(",").map((t) => t.trim()));
+    if (sizes) dbQuery = dbQuery.in("size", sizes.split(",").map((s) => s.trim()));
+    if (programCollegeIds && programCollegeIds.length > 0) {
+      dbQuery = dbQuery.in("id", programCollegeIds);
+    }
+
+    // Acceptance rate ranges
+    if (acceptanceRanges) {
+      const ranges = acceptanceRanges.split(",").map((r) => r.trim());
+      const orConditions: string[] = [];
+      for (const range of ranges) {
+        if (range.includes("0-15")) {
+          orConditions.push("and(acceptance_rate.gt.0,acceptance_rate.lte.15)");
+        } else if (range.includes("15-30")) {
+          orConditions.push("and(acceptance_rate.gte.15,acceptance_rate.lte.30)");
+        } else if (range.includes("30-50")) {
+          orConditions.push("and(acceptance_rate.gte.30,acceptance_rate.lte.50)");
+        } else if (range.includes("50-75")) {
+          orConditions.push("and(acceptance_rate.gte.50,acceptance_rate.lte.75)");
+        } else if (range.includes("75")) {
+          orConditions.push("acceptance_rate.gte.75");
+        }
+      }
+      if (orConditions.length > 0) dbQuery = dbQuery.or(orConditions.join(","));
     }
 
     const sortColumn =

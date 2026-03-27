@@ -3,6 +3,12 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { sanitizeFilterValue } from "@/lib/utils";
 import { mapCollegeRow } from "@/lib/map-college";
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+// PostgREST has URL-length limits. ~150 UUIDs ≈ 5.5 KB which stays safely
+// under the typical 8 KB ceiling.  When the set is larger we skip the DB-level
+// `.in()` and filter in JavaScript instead.
+const MAX_IN_IDS = 150;
+
 // ── Parsed filter parameters ──────────────────────────────────────────────────
 interface FilterParams {
   query: string;
@@ -21,6 +27,25 @@ interface FilterParams {
   jesuitOnly: string | null;
   programCollegeIds: string[] | null;
   searchProgramCollegeIds: string[] | null;
+}
+
+// ── Helper: paginate through ALL rows of a Supabase query ─────────────────────
+async function paginatedSelect<R>(
+  queryFn: (offset: number, batchEnd: number) => PromiseLike<{ data: R[] | null; error: unknown }>,
+  pageSize = 1000,
+): Promise<R[]> {
+  const all: R[] = [];
+  let offset = 0;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const { data, error } = await queryFn(offset, offset + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < pageSize) break;
+    offset += pageSize;
+  }
+  return all;
 }
 
 // ── Apply all filters to a Supabase query builder ─────────────────────────────
@@ -53,7 +78,11 @@ function applyFilters<T extends Record<string, any>>(
   if (f.types) q = q.in("type", f.types.split(",").map((t) => t.trim())) as T;
   if (f.sizes) q = q.in("size", f.sizes.split(",").map((s) => s.trim())) as T;
   if (f.jesuitOnly === "true") q = q.eq("jesuit", true) as T;
-  if (f.programCollegeIds) q = q.in("id", f.programCollegeIds) as T;
+  // Only apply .in() when the set is small enough for a URL param.
+  // Large sets are filtered in JS after fetching (see programFilterSet below).
+  if (f.programCollegeIds && f.programCollegeIds.length <= MAX_IN_IDS) {
+    q = q.in("id", f.programCollegeIds) as T;
+  }
   if (f.favoriteIds) q = q.in("id", f.favoriteIds.split(",").map((id) => id.trim())) as T;
 
   // Acceptance rate
@@ -130,37 +159,50 @@ export async function GET(request: NextRequest) {
     const favoriteIds = searchParams.get("favoriteIds");
     const programCategories = searchParams.get("programCategories");
 
-    // If filtering by program categories, get matching college IDs first
+    // If filtering by program categories, get ALL matching college IDs.
+    // The schools table can have thousands of rows per category, so we
+    // paginate to avoid Supabase's default 1000-row cap.
     let programCollegeIds: string[] | null = null;
     if (programCategories) {
       const categories = programCategories.split(",").map((c) => c.trim());
-      const { data: schools } = await supabase
-        .from("schools")
-        .select("college_id")
-        .in("category", categories);
-      if (schools) {
-        programCollegeIds = [
-          ...new Set(schools.map((s: { college_id: string }) => s.college_id)),
-        ];
-      }
+      const schools = await paginatedSelect<{ college_id: string }>(
+        (off, end) =>
+          supabase
+            .from("schools")
+            .select("college_id")
+            .in("category", categories)
+            .range(off, end),
+      );
+      programCollegeIds = [...new Set(schools.map((s) => s.college_id))];
     }
 
-    // If text query matches program names, get those college IDs for OR expansion
+    // Build a Set for JS-side filtering when the list is too large for .in()
+    const programFilterSet: Set<string> | null =
+      programCollegeIds && programCollegeIds.length > MAX_IN_IDS
+        ? new Set(programCollegeIds)
+        : null;
+
+    // If text query matches program names, get those college IDs for OR expansion.
+    // Cap at MAX_IN_IDS to keep the URL safe.
     let searchProgramCollegeIds: string[] | null = null;
     if (query) {
       const safe = sanitizeFilterValue(query);
       if (safe && safe.length >= 2) {
-        const { data: programMatches } = await supabase
-          .from("schools")
-          .select("college_id")
-          .ilike("name", `%${safe}%`)
-          .limit(1000);
-        if (programMatches && programMatches.length > 0) {
-          searchProgramCollegeIds = [
-            ...new Set(
-              programMatches.map((s: { college_id: string }) => s.college_id)
-            ),
+        const allProgramMatches = await paginatedSelect<{ college_id: string }>(
+          (off, end) =>
+            supabase
+              .from("schools")
+              .select("college_id")
+              .ilike("name", `%${safe}%`)
+              .range(off, end),
+        );
+        if (allProgramMatches.length > 0) {
+          const uniqueIds = [
+            ...new Set(allProgramMatches.map((s) => s.college_id)),
           ];
+          // Only include in OR expansion if the list fits in a URL
+          searchProgramCollegeIds =
+            uniqueIds.length <= MAX_IN_IDS ? uniqueIds : null;
         }
       }
     }
@@ -199,6 +241,49 @@ export async function GET(request: NextRequest) {
     }[sortBy] || "name";
 
     // ── Build main query ──────────────────────────────────────────────────
+    // When programFilterSet is non-null the ID list is too large for a URL
+    // param, so we fetch all colleges (with other filters) and apply the
+    // program filter + pagination in JavaScript.
+    const needsJsFilter = programFilterSet !== null;
+
+    if (needsJsFilter) {
+      // Fetch ALL matching colleges (minus the program filter) then
+      // narrow in JS.  Re-uses the batched-fetch helper.
+      const allRows = await paginatedSelect<Record<string, unknown>>(
+        (off, end) => {
+          let bq = applyFilters(
+            supabase.from("colleges").select("*"),
+            filters,
+          );
+          bq = bq.order(sortColumn, { ascending: sortOrder === "asc" });
+          bq = bq.range(off, end);
+          return bq as unknown as Promise<{ data: Record<string, unknown>[] | null; error: unknown }>;
+        },
+      );
+
+      // Apply program filter in JS
+      const filtered = allRows.filter((r) =>
+        programFilterSet.has(r.id as string),
+      );
+
+      // Relevance re-sort when applicable
+      if (sortBy === "relevance" && favoriteIds) {
+        const favIds = new Set(favoriteIds.split(","));
+        filtered.sort((a, b) => {
+          const aFav = favIds.has(a.id as string) ? 1 : 0;
+          const bFav = favIds.has(b.id as string) ? 1 : 0;
+          return bFav - aFav;
+        });
+      }
+
+      const start = (page - 1) * limit;
+      return cachedJson({
+        colleges: filtered.slice(start, start + limit).map(mapCollegeRow),
+        total: filtered.length,
+      });
+    }
+
+    // ── Standard path (no oversized program filter) ─────────────────────
     let dbQuery = applyFilters(
       supabase.from("colleges").select("*", { count: "exact" }),
       filters,

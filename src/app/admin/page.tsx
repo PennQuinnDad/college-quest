@@ -35,6 +35,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
+import { FilterMultiSelect } from "@/components/ui/filter-multi-select";
 import type { UserProfile } from "@/lib/types";
 
 // ────────────────────────────────────────────────────────────
@@ -298,6 +299,91 @@ function CollegesTab() {
   const [batchDeleteConfirm, setBatchDeleteConfirm] = useState(false);
   const selectAllRef = useRef<HTMLInputElement>(null);
 
+  // ── Filter state ──
+  const [filterStates, setFilterStates] = useState<string[]>([]);
+  const [filterRegions, setFilterRegions] = useState<string[]>([]);
+  const [filterSizes, setFilterSizes] = useState<string[]>([]);
+  const [filterTypes, setFilterTypes] = useState<string[]>([]);
+  const [filterAcceptance, setFilterAcceptance] = useState<string[]>([]);
+  const [filterPrograms, setFilterPrograms] = useState<string[]>([]);
+
+  const filterStaleTime = 24 * 60 * 60 * 1000;
+
+  const { data: stateOptions = [] } = useQuery<string[]>({
+    queryKey: ["filter-states"],
+    queryFn: async () => {
+      const res = await fetch("/api/colleges/filters/states");
+      return res.json();
+    },
+    staleTime: filterStaleTime,
+  });
+
+  const { data: regionOptions = [] } = useQuery<string[]>({
+    queryKey: ["filter-regions"],
+    queryFn: async () => {
+      const res = await fetch("/api/colleges/filters/regions");
+      return res.json();
+    },
+    staleTime: filterStaleTime,
+  });
+
+  const { data: acceptanceRangeOptions = [] } = useQuery<string[]>({
+    queryKey: ["filter-acceptance-ranges"],
+    queryFn: async () => {
+      const res = await fetch("/api/colleges/filters/acceptance-ranges");
+      return res.json();
+    },
+    staleTime: filterStaleTime,
+  });
+
+  const { data: programCategoryOptions = [] } = useQuery<{ name: string; count: number }[]>({
+    queryKey: ["filter-program-categories"],
+    queryFn: async () => {
+      const res = await fetch("/api/schools/categories");
+      if (!res.ok) return [];
+      const data = await res.json();
+      // API returns either strings or objects with name/count
+      return Array.isArray(data)
+        ? data.map((d: string | { name: string; count: number }) =>
+            typeof d === "string" ? { name: d, count: 0 } : d
+          )
+        : [];
+    },
+    staleTime: filterStaleTime,
+  });
+
+  const programOptions = programCategoryOptions.map((c) => c.name);
+
+  function toggleFilter(
+    setter: React.Dispatch<React.SetStateAction<string[]>>,
+    value: string
+  ) {
+    setter((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+    );
+    setPage(1);
+    setSelectedIds(new Set());
+  }
+
+  const hasFilters =
+    filterStates.length > 0 ||
+    filterRegions.length > 0 ||
+    filterSizes.length > 0 ||
+    filterTypes.length > 0 ||
+    filterAcceptance.length > 0 ||
+    filterPrograms.length > 0;
+
+  function clearAllFilters() {
+    setFilterStates([]);
+    setFilterRegions([]);
+    setFilterSizes([]);
+    setFilterTypes([]);
+    setFilterAcceptance([]);
+    setFilterPrograms([]);
+    setPage(1);
+    setSelectedIds(new Set());
+  }
+
   // Debounce search
   useEffect(() => {
     const t = setTimeout(() => {
@@ -311,13 +397,29 @@ function CollegesTab() {
   const jsonHeaders = { "Content-Type": "application/json" };
 
   const { data, isLoading } = useQuery<{ colleges: College[]; total: number }>({
-    queryKey: ["admin-colleges", debouncedSearch, page],
+    queryKey: [
+      "admin-colleges",
+      debouncedSearch,
+      page,
+      filterStates,
+      filterRegions,
+      filterSizes,
+      filterTypes,
+      filterAcceptance,
+      filterPrograms,
+    ],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
         limit: "20",
         query: debouncedSearch,
       });
+      if (filterStates.length > 0) params.set("states", filterStates.join(","));
+      if (filterRegions.length > 0) params.set("regions", filterRegions.join(","));
+      if (filterSizes.length > 0) params.set("sizes", filterSizes.join(","));
+      if (filterTypes.length > 0) params.set("types", filterTypes.join(","));
+      if (filterAcceptance.length > 0) params.set("acceptanceRanges", filterAcceptance.join(","));
+      if (filterPrograms.length > 0) params.set("programCategories", filterPrograms.join(","));
       const res = await fetch(`/api/admin/colleges?${params}`);
       if (!res.ok) throw new Error("Failed to fetch colleges");
       return res.json();
@@ -518,6 +620,55 @@ function CollegesTab() {
             Add College
           </Button>
         </div>
+      </div>
+
+      {/* Filters */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <FilterMultiSelect
+          label="State"
+          options={stateOptions}
+          selected={filterStates}
+          onToggle={(v) => toggleFilter(setFilterStates, v)}
+        />
+        <FilterMultiSelect
+          label="Region"
+          options={regionOptions}
+          selected={filterRegions}
+          onToggle={(v) => toggleFilter(setFilterRegions, v)}
+        />
+        <FilterMultiSelect
+          label="Type"
+          options={COLLEGE_TYPES}
+          selected={filterTypes}
+          onToggle={(v) => toggleFilter(setFilterTypes, v)}
+        />
+        <FilterMultiSelect
+          label="Size"
+          options={COLLEGE_SIZES}
+          selected={filterSizes}
+          onToggle={(v) => toggleFilter(setFilterSizes, v)}
+        />
+        <FilterMultiSelect
+          label="Acceptance"
+          options={acceptanceRangeOptions}
+          selected={filterAcceptance}
+          onToggle={(v) => toggleFilter(setFilterAcceptance, v)}
+        />
+        <FilterMultiSelect
+          label="Program"
+          options={programOptions}
+          selected={filterPrograms}
+          onToggle={(v) => toggleFilter(setFilterPrograms, v)}
+        />
+        {hasFilters && (
+          <button
+            onClick={clearAllFilters}
+            className="flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm text-muted-foreground hover:border-gray-400 hover:text-foreground transition-colors"
+          >
+            <FaIcon icon="xmark" style="solid" className="text-xs" />
+            Clear all
+          </button>
+        )}
       </div>
 
       {/* Table */}
@@ -892,7 +1043,13 @@ function SchoolsTab() {
     queryFn: async () => {
       const res = await fetch("/api/schools/categories");
       if (!res.ok) throw new Error("Failed to fetch categories");
-      return res.json();
+      const data = await res.json();
+      // API returns { name, count }[] objects — extract just the names
+      return Array.isArray(data)
+        ? data.map((d: string | { name: string }) =>
+            typeof d === "string" ? d : d.name
+          )
+        : [];
     },
   });
 

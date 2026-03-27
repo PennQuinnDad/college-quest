@@ -320,7 +320,7 @@ export function CollegeNotes({ collegeId, user }: CollegeNotesProps) {
                       </div>
                     </div>
                   ) : (
-                    <p className="whitespace-pre-line text-sm text-foreground">
+                    <p className="whitespace-pre-line break-words text-sm text-foreground">
                       {note.content}
                     </p>
                   )}
